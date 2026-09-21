@@ -1,0 +1,3079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KCST Staff Pro</title>
+
+<!-- Supabase JS library -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    body {
+        background: #f4f7fb;
+        color: #1e293b;
+        min-height: 100vh;
+    }
+
+    /* ================= SIDEBAR ================= */
+
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 250px;
+        height: 100vh;
+        background: linear-gradient(180deg, #111827, #1e293b);
+        color: white;
+        padding: 20px 15px;
+        z-index: 1000;
+        transition: 0.3s;
+    }
+
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px;
+        margin-bottom: 30px;
+    }
+
+    .logo-icon {
+        width: 45px;
+        height: 45px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 22px;
+    }
+
+    .logo h2 {
+        font-size: 19px;
+    }
+
+    .logo span {
+        display: block;
+        color: #94a3b8;
+        font-size: 11px;
+        margin-top: 2px;
+    }
+
+    .menu-title {
+        font-size: 11px;
+        color: #64748b;
+        padding: 0 12px;
+        margin: 15px 0 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        padding: 13px 14px;
+        margin: 5px 0;
+        border-radius: 10px;
+        color: #cbd5e1;
+        text-decoration: none;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .menu-item:hover {
+        background: rgba(255,255,255,0.08);
+        color: white;
+    }
+
+    .menu-item.active {
+        background: linear-gradient(90deg, #2563eb, #4f46e5);
+        color: white;
+        box-shadow: 0 5px 15px rgba(37,99,235,0.25);
+    }
+
+    .menu-icon {
+        width: 22px;
+        text-align: center;
+        font-size: 18px;
+    }
+
+    /* ================= MAIN ================= */
+
+    .main {
+        margin-left: 250px;
+        min-height: 100vh;
+        transition: 0.3s;
+    }
+
+    /* ================= TOPBAR ================= */
+
+    .topbar {
+        height: 75px;
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 30px;
+        position: sticky;
+        top: 0;
+        z-index: 900;
+    }
+
+    .top-left {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .mobile-menu {
+        display: none;
+        border: none;
+        background: #f1f5f9;
+        width: 40px;
+        height: 40px;
+        border-radius: 9px;
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    .page-title h1 {
+        font-size: 22px;
+        color: #111827;
+    }
+
+    .page-title p {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 3px;
+    }
+
+    .top-right {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .search {
+        position: relative;
+    }
+
+    .search input {
+        width: 230px;
+        padding: 11px 15px 11px 38px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        outline: none;
+        background: #f8fafc;
+    }
+
+    .search span {
+        position: absolute;
+        left: 13px;
+        top: 10px;
+        color: #64748b;
+    }
+
+    .notification {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: #f8fafc;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        position: relative;
+        font-size: 18px;
+    }
+
+    .notification .dot {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #ef4444;
+    }
+
+    .profile {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+    }
+
+    .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+    }
+
+    .profile-info strong {
+        font-size: 13px;
+        display: block;
+    }
+
+    .profile-info span {
+        font-size: 11px;
+        color: #64748b;
+    }
+
+    /* ================= CONTENT ================= */
+
+    .content {
+        padding: 30px;
+    }
+
+    .section {
+        display: none;
+        animation: fadeIn 0.25s ease;
+    }
+
+    .section.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .welcome {
+        background: linear-gradient(135deg, #2563eb, #4f46e5);
+        color: white;
+        border-radius: 18px;
+        padding: 25px 28px;
+        margin-bottom: 25px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .welcome h2 {
+        font-size: 24px;
+        margin-bottom: 7px;
+    }
+
+    .welcome p {
+        opacity: 0.85;
+        font-size: 14px;
+    }
+
+    .welcome .big-icon {
+        position: absolute;
+        right: 35px;
+        top: 10px;
+        font-size: 100px;
+        opacity: 0.12;
+    }
+
+    /* ================= CARDS ================= */
+
+    .cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 18px;
+        margin-bottom: 25px;
+    }
+
+    .card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 3px 12px rgba(15,23,42,0.04);
+    }
+
+    .stat-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .stat-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+
+    .blue {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .green {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .orange {
+        background: #ffedd5;
+        color: #ea580c;
+    }
+
+    .purple {
+        background: #ede9fe;
+        color: #7c3aed;
+    }
+
+    .stat-info p {
+        color: #64748b;
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+
+    .stat-info h2 {
+        font-size: 25px;
+    }
+
+    /* ================= DASHBOARD GRID ================= */
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 20px;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+    }
+
+    .card-header h3 {
+        font-size: 16px;
+    }
+
+    .card-header button {
+        border: none;
+        background: transparent;
+        color: #2563eb;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    /* ================= TABLE ================= */
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        text-align: left;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 11px;
+        padding: 12px;
+        text-transform: uppercase;
+    }
+
+    td {
+        padding: 13px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 13px;
+    }
+
+    .staff-name {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .small-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: #e0e7ff;
+        color: #4338ca;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 12px;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .badge {
+        padding: 5px 9px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: 600;
+    }
+
+    .present {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .absent {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .leave {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+    .weekoff {
+        background: #e0e7ff;
+        color: #4338ca;
+    }
+
+    /* ================= QUICK ACTIONS ================= */
+
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .quick-btn {
+        padding: 18px 10px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        cursor: pointer;
+        text-align: center;
+        transition: 0.2s;
+    }
+
+    .quick-btn:hover {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        transform: translateY(-2px);
+    }
+
+    .quick-btn div {
+        font-size: 24px;
+        margin-bottom: 7px;
+    }
+
+    .quick-btn span {
+        font-size: 12px;
+        color: #475569;
+    }
+
+    /* ================= PAGE HEAD ================= */
+
+    .page-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 22px;
+    }
+
+    .page-head h2 {
+        font-size: 22px;
+    }
+
+    .page-head p {
+        color: #64748b;
+        font-size: 13px;
+        margin-top: 4px;
+    }
+
+    .primary-btn {
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 9px;
+        padding: 11px 17px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+
+    .primary-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .primary-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    /* ================= COMPANY INFO ================= */
+
+    .company-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 20px;
+    }
+
+    .company-logo-box {
+        text-align: center;
+        padding: 35px 20px;
+    }
+
+    .company-logo {
+        width: 100px;
+        height: 100px;
+        margin: auto;
+        border-radius: 25px;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 45px;
+        font-weight: bold;
+    }
+
+    .company-logo-box h2 {
+        margin-top: 15px;
+    }
+
+    .company-logo-box p {
+        color: #64748b;
+        font-size: 13px;
+        margin-top: 5px;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .info-field label {
+        display: block;
+        color: #64748b;
+        font-size: 11px;
+        margin-bottom: 6px;
+    }
+
+    .info-field input,
+    .info-field textarea,
+    .settings-input {
+        width: 100%;
+        padding: 11px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        outline: none;
+        font-size: 13px;
+        background: #f8fafc;
+    }
+
+    .info-field textarea {
+        height: 80px;
+        resize: vertical;
+    }
+
+    .full {
+        grid-column: 1 / -1;
+    }
+
+    /* ================= ATTENDANCE ================= */
+
+    .attendance-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        margin-bottom: 20px;
+    }
+
+    .attendance-box {
+        padding: 20px;
+        border-radius: 14px;
+        background: white;
+        border: 1px solid #e5e7eb;
+    }
+
+    .attendance-box h2 {
+        margin-top: 8px;
+        font-size: 28px;
+    }
+
+    .attendance-box p {
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    /* ================= VIEW TOGGLE ================= */
+
+    .view-toggle {
+        display: inline-flex;
+        background: #f1f5f9;
+        border-radius: 10px;
+        padding: 4px;
+        margin-bottom: 20px;
+        gap: 4px;
+    }
+
+    .view-tab {
+        border: none;
+        background: transparent;
+        padding: 8px 18px;
+        border-radius: 7px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #475569;
+        font-weight: 500;
+        transition: 0.15s;
+    }
+
+    .view-tab:hover {
+        color: #1e293b;
+    }
+
+    .view-tab.active {
+        background: white;
+        color: #2563eb;
+        box-shadow: 0 2px 6px rgba(15,23,42,0.08);
+    }
+
+    /* ================= SETTINGS ================= */
+
+    .settings-list {
+        max-width: 850px;
+    }
+
+    .setting-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .setting-item h4 {
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+
+    .setting-item p {
+        color: #64748b;
+        font-size: 12px;
+    }
+
+    .toggle {
+        width: 46px;
+        height: 24px;
+        background: #cbd5e1;
+        border-radius: 20px;
+        position: relative;
+        cursor: pointer;
+    }
+
+    .toggle::after {
+        content: "";
+        width: 18px;
+        height: 18px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        transition: 0.2s;
+    }
+
+    .toggle.active {
+        background: #2563eb;
+    }
+
+    .toggle.active::after {
+        left: 25px;
+    }
+
+    /* ================= STATUS MESSAGES ================= */
+
+    .db-status {
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .db-status.success {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .db-status.error {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .db-status.info {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    /* ================= MODAL ================= */
+    .modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        z-index: 2000;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    .modal-backdrop.show {
+        display: flex;
+    }
+
+    .modal {
+        background: white;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 520px;
+        padding: 26px 28px;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+        animation: fadeIn 0.2s ease;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal h3 {
+        font-size: 18px;
+        margin-bottom: 6px;
+    }
+
+    .modal .modal-sub {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 20px;
+    }
+
+    .modal .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+
+    .modal .form-row.full {
+        grid-template-columns: 1fr;
+    }
+
+    .modal label {
+        display: block;
+        font-size: 11px;
+        color: #64748b;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .modal input,
+    .modal select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 13px;
+        background: #f8fafc;
+        outline: none;
+    }
+
+    .modal input:focus,
+    .modal select:focus {
+        border-color: #2563eb;
+        background: white;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 22px;
+    }
+
+    .btn-secondary {
+        background: #f1f5f9;
+        color: #334155;
+        border: none;
+        border-radius: 9px;
+        padding: 11px 17px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+
+    .btn-secondary:hover {
+        background: #e2e8f0;
+    }
+
+    .btn-danger {
+        background: #dc2626;
+        color: white;
+        border: none;
+        border-radius: 9px;
+        padding: 11px 17px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+
+    .btn-danger:hover {
+        background: #b91c1c;
+    }
+
+    /* Action buttons inside table */
+    .action-btn {
+        border: none;
+        background: #f1f5f9;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 5px;
+        transition: 0.15s;
+    }
+
+    .action-btn:hover {
+        background: #e2e8f0;
+        transform: translateY(-1px);
+    }
+
+    .action-btn.edit:hover {
+        background: #dbeafe;
+    }
+
+    .action-btn.delete:hover {
+        background: #fee2e2;
+    }
+
+    /* ================= MOBILE ================= */
+
+    .overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 999;
+    }
+
+    @media(max-width: 1100px) {
+        .cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media(max-width: 800px) {
+
+        .sidebar {
+            left: -260px;
+        }
+
+        .sidebar.open {
+            left: 0;
+        }
+
+        .main {
+            margin-left: 0;
+        }
+
+        .mobile-menu {
+            display: block;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        .topbar {
+            padding: 0 15px;
+        }
+
+        .search {
+            display: none;
+        }
+
+        .profile-info {
+            display: none;
+        }
+
+        .content {
+            padding: 18px;
+        }
+
+        .company-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media(max-width: 600px) {
+
+        .cards {
+            grid-template-columns: 1fr;
+        }
+
+        .attendance-summary {
+            grid-template-columns: 1fr;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .welcome {
+            padding: 20px;
+        }
+
+        .welcome h2 {
+            font-size: 20px;
+        }
+
+        .page-head {
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .page-head h2 {
+            font-size: 19px;
+        }
+
+        .primary-btn {
+            white-space: nowrap;
+        }
+
+        .quick-actions {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<!-- ================= SIDEBAR ================= -->
+
+<div class="sidebar" id="sidebar">
+
+    <div class="logo">
+        <div class="logo-icon">👥</div>
+        <div>
+            <h2>KCST Staff Pro</h2>
+            <span>Staff Management System</span>
+        </div>
+    </div>
+
+    <div class="menu-title">Main Menu</div>
+
+    <a class="menu-item active" data-section="dashboard">
+        <span class="menu-icon">🏠</span>
+        Dashboard
+    </a>
+
+    <a class="menu-item" data-section="company">
+        <span class="menu-icon">🏢</span>
+        Company Info
+    </a>
+
+    <a class="menu-item" data-section="staff">
+        <span class="menu-icon">👥</span>
+        Staff Details
+    </a>
+
+    <a class="menu-item" data-section="attendance">
+        <span class="menu-icon">🕒</span>
+        Attendance
+    </a>
+
+    <div class="menu-title">System</div>
+
+    <a class="menu-item" data-section="settings">
+        <span class="menu-icon">⚙️</span>
+        Settings
+    </a>
+
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- ================= MAIN ================= -->
+
+<div class="main">
+
+    <!-- TOP BAR -->
+
+    <div class="topbar">
+
+        <div class="top-left">
+
+            <button class="mobile-menu" id="mobileMenu">
+                ☰
+            </button>
+
+            <div class="page-title">
+                <h1 id="topTitle">Dashboard</h1>
+                <p id="topSubtitle">Staff Management System</p>
+            </div>
+
+        </div>
+
+        <div class="top-right">
+
+            <div class="search">
+                <span>🔍</span>
+                <input type="text" placeholder="Search...">
+            </div>
+
+            <div class="notification">
+                🔔
+                <div class="dot"></div>
+            </div>
+
+            <div class="profile">
+                <div class="avatar">SSA</div>
+
+                <div class="profile-info">
+                    <strong>SAYYID SHEREEF KC</strong>
+                    <span>Administrator</span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- CONTENT -->
+
+    <div class="content">
+
+        <!-- DB STATUS BANNER (global) -->
+        <div id="globalStatus" class="db-status info" style="display:none;"></div>
+
+        <!-- ================= DASHBOARD ================= -->
+
+        <section class="section active" id="dashboard">
+
+            <div class="welcome">
+                <h2>Welcome back, Admin! 👋</h2>
+                <p>Here's what's happening with your company today.</p>
+                <div class="big-icon">📊</div>
+            </div>
+
+            <div class="cards">
+
+                <div class="card stat-card">
+                    <div class="stat-info">
+                        <p>Total Staff</p>
+                        <h2 id="dashTotalStaff">–</h2>
+                    </div>
+                    <div class="stat-icon blue">👥</div>
+                </div>
+
+                <div class="card stat-card">
+                    <div class="stat-info">
+                        <p>Present Today</p>
+                        <h2 id="dashPresentToday">–</h2>
+                    </div>
+                    <div class="stat-icon green">✓</div>
+                </div>
+
+                <div class="card stat-card">
+                    <div class="stat-info">
+                        <p>On Leave</p>
+                        <h2 id="dashOnLeave">–</h2>
+                    </div>
+                    <div class="stat-icon orange">📅</div>
+                </div>
+
+                <div class="card stat-card">
+                    <div class="stat-info">
+                        <p>Absent</p>
+                        <h2 id="dashAbsent">–</h2>
+                    </div>
+                    <div class="stat-icon purple">⚠</div>
+                </div>
+
+            </div>
+
+            <div class="dashboard-grid">
+
+                <div class="card">
+
+                    <div class="card-header">
+                        <h3>Today's Attendance</h3>
+                        <button onclick="showSection('attendance')">
+                            View All →
+                        </button>
+                    </div>
+
+                    <div class="table-wrapper">
+
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Staff</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboardAttendanceBody">
+                                <tr><td colspan="3" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
+                            </tbody>
+                        </table>
+
+                    </div>
+
+                </div>
+
+                <div class="card">
+
+                    <div class="card-header">
+                        <h3>Quick Actions</h3>
+                    </div>
+
+                    <div class="quick-actions">
+
+                        <div class="quick-btn" onclick="showSection('staff')">
+                            <div>➕</div>
+                            <span>Add Staff</span>
+                        </div>
+
+                        <div class="quick-btn" onclick="showSection('attendance')">
+                            <div>🕒</div>
+                            <span>Attendance</span>
+                        </div>
+
+                        <div class="quick-btn" onclick="showSection('company')">
+                            <div>🏢</div>
+                            <span>Company</span>
+                        </div>
+
+                        <div class="quick-btn" onclick="showSection('settings')">
+                            <div>⚙️</div>
+                            <span>Settings</span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= COMPANY ================= -->
+
+        <section class="section" id="company">
+
+            <div class="page-head">
+                <div>
+                    <h2>Company Information</h2>
+                    <p>Manage your company details</p>
+                </div>
+
+                <button class="primary-btn" onclick="saveCompany()">
+                    💾 Save Changes
+                </button>
+            </div>
+
+            <div class="company-grid">
+
+                <div class="card company-logo-box">
+
+                    <div class="company-logo">
+                        S
+                    </div>
+
+                    <h2 id="companyLogoName">StaffPro</h2>
+                    <p>Staff Management System</p>
+
+                    <br>
+
+                    <button class="primary-btn">
+                        Change Logo
+                    </button>
+
+                </div>
+
+                <div class="card">
+
+                    <div class="info-grid">
+
+                        <div class="info-field">
+                            <label>Company Name</label>
+                            <input id="companyName" value="StaffPro Technologies">
+                        </div>
+
+                        <div class="info-field">
+                            <label>Registration Number</label>
+                            <input id="companyReg" value="REG-2026-001">
+                        </div>
+
+                        <div class="info-field">
+                            <label>Phone Number</label>
+                            <input id="companyPhone" value="+91 98765 43210">
+                        </div>
+
+                        <div class="info-field">
+                            <label>Email Address</label>
+                            <input id="companyEmail" value="info@company.com">
+                        </div>
+
+                        <div class="info-field">
+                            <label>Website</label>
+                            <input id="companyWebsite" value="www.company.com">
+                        </div>
+
+                        <div class="info-field">
+                            <label>GSTIN</label>
+                            <input id="companyGstin" value="32ABCDE1234F1Z5">
+                        </div>
+
+                        <div class="info-field full">
+                            <label>Company Address</label>
+                            <textarea id="companyAddress">Company Road,
+Kerala, India</textarea>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= STAFF ================= -->
+
+        <section class="section" id="staff">
+
+            <div class="page-head">
+
+                <div>
+                    <h2>Staff Details</h2>
+                    <p>Manage employees and staff information</p>
+                </div>
+
+                <button class="primary-btn" onclick="addStaff()">
+                    ➕ Add Staff
+                </button>
+
+            </div>
+
+            <div class="card">
+
+                <div class="table-wrapper">
+
+                    <table>
+
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Staff Name</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Joined Date</th>
+                                <th>Daily Rate</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="staffTableBody">
+                            <tr><td colspan="7" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= ATTENDANCE ================= -->
+
+        <section class="section" id="attendance">
+
+            <div class="page-head">
+
+                <div>
+                    <h2>Attendance</h2>
+                    <p>Track daily and monthly staff attendance</p>
+                </div>
+
+                <button class="primary-btn" onclick="markAttendance()">
+                    🕒 Mark Attendance
+                </button>
+
+            </div>
+
+            <div class="view-toggle">
+                <button class="view-tab active" id="tabDay" onclick="switchAttendanceView('day')">📅 Day</button>
+                <button class="view-tab" id="tabMonth" onclick="switchAttendanceView('month')">📆 Month</button>
+            </div>
+
+            <!-- ============ DAY VIEW ============ -->
+            <div id="attendanceDayView">
+
+                <div class="attendance-summary">
+
+                    <div class="attendance-box">
+                        <p>Present Today</p>
+                        <h2 id="attPresentToday">–</h2>
+                    </div>
+
+                    <div class="attendance-box">
+                        <p>Absent Today</p>
+                        <h2 id="attAbsentToday">–</h2>
+                    </div>
+
+                    <div class="attendance-box">
+                        <p>On Leave</p>
+                        <h2 id="attOnLeave">–</h2>
+                    </div>
+
+                </div>
+
+                <div class="card">
+
+                    <div class="card-header">
+                        <h3>Daily Attendance</h3>
+
+                        <input type="date"
+                               id="attendanceDate"
+                               style="padding:8px;border:1px solid #ddd;border-radius:7px;">
+                    </div>
+
+                    <div class="table-wrapper">
+
+                        <table>
+
+                            <thead>
+                                <tr>
+                                    <th>Staff ID</th>
+                                    <th>Staff Name</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Status</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="attendanceTableBody">
+                                <tr><td colspan="6" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ============ MONTH VIEW ============ -->
+            <div id="attendanceMonthView" style="display:none;">
+
+                <div class="card" style="margin-bottom:20px;">
+                    <div class="card-header">
+                        <h3>Month Overview</h3>
+                        <input type="month"
+                               id="attendanceMonth"
+                               style="padding:8px;border:1px solid #ddd;border-radius:7px;">
+                    </div>
+                </div>
+
+                <div class="attendance-summary">
+
+                    <div class="attendance-box">
+                        <p>Total Present</p>
+                        <h2 id="monthTotalPresent">–</h2>
+                    </div>
+
+                    <div class="attendance-box">
+                        <p>Total Absent</p>
+                        <h2 id="monthTotalAbsent">–</h2>
+                    </div>
+
+                    <div class="attendance-box">
+                        <p>Total Leave</p>
+                        <h2 id="monthTotalLeave">–</h2>
+                    </div>
+
+                </div>
+
+                <div class="card" style="margin-bottom:20px;">
+                    <div class="card-header">
+                        <h3>Per-Staff Summary</h3>
+                        <span style="font-size:12px;color:#64748b;">Click 🔍 to see full monthly detail</span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Staff ID</th>
+                                    <th>Staff Name</th>
+                                    <th>Present</th>
+                                    <th>Absent</th>
+                                    <th>Leave</th>
+                                    <th>Week Off</th>
+                                    <th>Total Records</th>
+                                    <th style="text-align:right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthStaffBody">
+                                <tr><td colspan="8" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Daily Breakdown</h3>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Present</th>
+                                    <th>Absent</th>
+                                    <th>Leave</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthDailyBody">
+                                <tr><td colspan="5" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ================= SETTINGS ================= -->
+
+        <section class="section" id="settings">
+
+            <div class="page-head">
+
+                <div>
+                    <h2>Settings</h2>
+                    <p>Configure your staff management system</p>
+                </div>
+
+                <button class="primary-btn" onclick="saveSettings()">
+                    💾 Save Settings
+                </button>
+
+            </div>
+
+            <div class="card settings-list">
+
+                <div class="setting-item">
+                    <div>
+                        <h4>Automatic Attendance</h4>
+                        <p>Automatically record attendance based on check-in time.</p>
+                    </div>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+
+                <div class="setting-item">
+                    <div>
+                        <h4>Attendance Notifications</h4>
+                        <p>Receive notifications for late or absent staff.</p>
+                    </div>
+                    <div class="toggle active" onclick="toggleSetting(this)"></div>
+                </div>
+
+                <div class="setting-item">
+                    <div>
+                        <h4>Dark Mode</h4>
+                        <p>Use dark theme for the dashboard.</p>
+                    </div>
+                    <div class="toggle" onclick="toggleDarkMode(this)"></div>
+                </div>
+
+                <div class="setting-item">
+                    <div>
+                        <h4>System Backup</h4>
+                        <p>Keep regular backups of company and staff data.</p>
+                    </div>
+                    <button class="primary-btn" onclick="backupData()">Backup</button>
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+</div>
+
+<!-- ================= MARK ATTENDANCE MODAL ================= -->
+<div class="modal-backdrop" id="markAttendanceModal">
+    <div class="modal">
+        <h3>Mark Attendance</h3>
+        <p class="modal-sub">Record a staff member's attendance for a specific date.</p>
+
+        <div class="form-row full">
+            <div>
+                <label>Staff *</label>
+                <select id="markStaffSelect">
+                    <option value="">— Loading staff… —</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>Date *</label>
+                <input id="markDate" type="date">
+            </div>
+            <div>
+                <label>Status *</label>
+                <select id="markStatus">
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                    <option value="leave">Leave</option>
+                    <option value="week_off">Week Off</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>Check In</label>
+                <input id="markCheckIn" type="time">
+            </div>
+            <div>
+                <label>Check Out</label>
+                <input id="markCheckOut" type="time">
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeMarkModal()">Cancel</button>
+            <button class="primary-btn" onclick="saveAttendance()" id="markSaveBtn">🕒 Save Attendance</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= ADD STAFF MODAL ================= -->
+<div class="modal-backdrop" id="addStaffModal">
+    <div class="modal">
+        <h3>Add New Staff</h3>
+        <p class="modal-sub">Fill in the details below to add a new team member.</p>
+
+        <div class="form-row full">
+            <div>
+                <label>Staff ID (auto-generated)</label>
+                <input id="addStaffCode" readonly style="background:#f1f5f9;color:#64748b;">
+            </div>
+        </div>
+
+        <div class="form-row full">
+            <div>
+                <label>Full Name *</label>
+                <input id="addStaffName" placeholder="e.g. Arun Mathew">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>Role</label>
+                <input id="addStaffRole" placeholder="e.g. Senior Media Analyst">
+            </div>
+            <div>
+                <label>Department</label>
+                <input id="addStaffDept" placeholder="e.g. Operations">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>Joined Date</label>
+                <input id="addStaffJoined" type="date">
+            </div>
+            <div>
+                <label>Daily Rate (₹)</label>
+                <input id="addStaffRate" type="number" step="0.01" placeholder="e.g. 500">
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeAddModal()">Cancel</button>
+            <button class="primary-btn" onclick="saveNewStaff()" id="addStaffSaveBtn">➕ Add Staff</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= EDIT STAFF MODAL ================= -->
+<div class="modal-backdrop" id="editStaffModal">
+    <div class="modal">
+        <h3>Edit Staff</h3>
+        <p class="modal-sub">Update the details and save your changes.</p>
+
+        <input type="hidden" id="editStaffId">
+
+        <div class="form-row full">
+            <div>
+                <label>Staff ID</label>
+                <input id="editStaffCode" readonly style="background:#f1f5f9;color:#64748b;">
+            </div>
+        </div>
+
+        <div class="form-row full">
+            <div>
+                <label>Full Name</label>
+                <input id="editStaffName" placeholder="e.g. Arun Mathew">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>Role</label>
+                <input id="editStaffRole" placeholder="e.g. Senior Media Analyst">
+            </div>
+            <div>
+                <label>Department</label>
+                <input id="editStaffDept" placeholder="e.g. Operations">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>Joined Date</label>
+                <input id="editStaffJoined" type="date">
+            </div>
+            <div>
+                <label>Daily Rate (₹)</label>
+                <input id="editStaffRate" type="number" step="0.01" placeholder="e.g. 500">
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button class="primary-btn" onclick="saveStaffEdit()">💾 Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= DELETE STAFF MODAL ================= -->
+<div class="modal-backdrop" id="deleteStaffModal">
+    <div class="modal" style="max-width: 420px;">
+        <h3>Delete Staff</h3>
+        <p class="modal-sub">
+            Are you sure you want to delete <strong id="deleteStaffName">this staff member</strong>?
+            This action cannot be undone.
+        </p>
+        <input type="hidden" id="deleteStaffId">
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+            <button class="btn-danger" onclick="confirmDeleteStaff()">🗑 Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= DELETE ATTENDANCE MODAL ================= -->
+<div class="modal-backdrop" id="deleteAttendanceModal">
+    <div class="modal" style="max-width: 440px;">
+        <h3>Delete Attendance Record</h3>
+        <p class="modal-sub">
+            Are you sure you want to delete the attendance record for
+            <strong id="deleteAttName">this staff</strong> on
+            <strong id="deleteAttDate">this date</strong>?
+            This action cannot be undone.
+        </p>
+        <input type="hidden" id="deleteAttId">
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeDeleteAttendanceModal()">Cancel</button>
+            <button class="btn-danger" onclick="confirmDeleteAttendance()">🗑 Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= STAFF ATTENDANCE DETAIL MODAL ================= -->
+<div class="modal-backdrop" id="staffAttDetailModal">
+    <div class="modal" style="max-width:760px;">
+        <h3 id="staffDetailName">Staff Attendance</h3>
+        <p class="modal-sub" id="staffDetailMeta">—</p>
+
+        <div class="form-row full" style="margin-bottom:14px;">
+            <div>
+                <label>Month</label>
+                <input id="staffDetailMonth" type="month">
+            </div>
+        </div>
+
+        <div class="attendance-summary" style="margin-bottom:16px;grid-template-columns:repeat(5,1fr);gap:12px;">
+            <div class="attendance-box" style="padding:14px;">
+                <p>Present</p>
+                <h2 id="staffDetailPresent" style="font-size:22px;">–</h2>
+            </div>
+            <div class="attendance-box" style="padding:14px;">
+                <p>Absent</p>
+                <h2 id="staffDetailAbsent" style="font-size:22px;">–</h2>
+            </div>
+            <div class="attendance-box" style="padding:14px;">
+                <p>Leave</p>
+                <h2 id="staffDetailLeave" style="font-size:22px;">–</h2>
+            </div>
+            <div class="attendance-box" style="padding:14px;">
+                <p>Week Offs</p>
+                <h2 id="staffDetailWeekOff" style="font-size:22px;">–</h2>
+            </div>
+            <div class="attendance-box" style="background:#eff6ff;border-color:#bfdbfe;padding:14px;">
+                <p style="color:#1d4ed8;">Total Amount</p>
+                <h2 id="staffDetailTotal" style="color:#1d4ed8;font-size:20px;">–</h2>
+            </div>
+        </div>
+
+        <div class="table-wrapper" style="max-height:340px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:10px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Check In</th>
+                        <th>Check Out</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="staffDetailBody">
+                    <tr><td colspan="4" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="modal-actions" style="justify-content:space-between;">
+            <button class="btn-secondary" onclick="printSalarySlip()">🖨️ Print Salary Slip</button>
+            <button class="btn-secondary" onclick="closeStaffDetailModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+
+<script>
+/* ================================================================
+   SUPABASE CONNECTION
+   ================================================================ */
+const SUPABASE_URL = 'https://rrtpnknbrrcwzmlqeyha.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_S8YKuWueI4Bs3IKXaYSNzg_pH5wCyYC';
+
+const { createClient } = supabase;
+const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ================================================================
+   GLOBAL HELPERS
+   ================================================================ */
+function showGlobalStatus(message, type = 'info') {
+    const el = document.getElementById('globalStatus');
+    el.textContent = message;
+    el.className = 'db-status ' + type;
+    el.style.display = 'flex';
+    clearTimeout(el._timeout);
+    el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+/* Normalize status: handles 'week_off' or 'week off' */
+function normalizeStatus(raw) {
+    const s = (raw || '').toLowerCase().trim().replace(/\s+/g, '_');
+    if (s === 'present') return 'present';
+    if (s === 'absent') return 'absent';
+    if (s === 'leave') return 'leave';
+    if (s === 'week_off' || s === 'weekoff') return 'week_off';
+    return s;
+}
+
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+const menuItems = document.querySelectorAll(".menu-item");
+const sections = document.querySelectorAll(".section");
+
+const titles = {
+    dashboard: ["Dashboard", "Staff Management System"],
+    company: ["Company Info", "Manage company information"],
+    staff: ["Staff Details", "Manage employees and staff"],
+    attendance: ["Attendance", "Track staff attendance"],
+    settings: ["Settings", "System configuration"]
+};
+
+menuItems.forEach(item => {
+    item.addEventListener("click", function() {
+        const section = this.dataset.section;
+        showSection(section);
+    });
+});
+
+function showSection(sectionName) {
+    sections.forEach(section => section.classList.remove("active"));
+    menuItems.forEach(item => item.classList.remove("active"));
+
+    const target = document.getElementById(sectionName);
+    if (target) target.classList.add("active");
+
+    const activeMenu = document.querySelector('.menu-item[data-section="' + sectionName + '"]');
+    if (activeMenu) activeMenu.classList.add("active");
+
+    if (titles[sectionName]) {
+        document.getElementById("topTitle").textContent = titles[sectionName][0];
+        document.getElementById("topSubtitle").textContent = titles[sectionName][1];
+    }
+
+    closeMobileMenu();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    if (sectionName === 'dashboard') loadDashboard();
+    if (sectionName === 'staff') loadStaff();
+    if (sectionName === 'attendance') {
+        if (attendanceView === 'month') loadMonthAttendance();
+        else loadAttendance();
+    }
+    if (sectionName === 'company') loadCompany();
+}
+
+/* ================================================================
+   MOBILE MENU
+   ================================================================ */
+const sidebar = document.getElementById("sidebar");
+const overlay = document.getElementById("overlay");
+const mobileMenu = document.getElementById("mobileMenu");
+
+mobileMenu.addEventListener("click", function() {
+    sidebar.classList.toggle("open");
+    overlay.classList.toggle("show");
+});
+
+overlay.addEventListener("click", closeMobileMenu);
+
+function closeMobileMenu() {
+    sidebar.classList.remove("open");
+    overlay.classList.remove("show");
+}
+
+/* ================================================================
+   DASHBOARD
+   ================================================================ */
+async function loadDashboard() {
+    try {
+        const { count: totalStaff, error: err1 } = await _supabase
+            .from('staff')
+            .select('*', { count: 'exact', head: true });
+        if (err1) throw err1;
+
+        const today = new Date().toISOString().split('T')[0];
+
+        const { data: attData, error: err2 } = await _supabase
+            .from('attendance')
+            .select('id, staff_id, status, check_in, date')
+            .eq('date', today);
+        if (err2) throw err2;
+
+        const { data: staffData, error: err3 } = await _supabase
+            .from('staff')
+            .select('id, staff_id, name, department');
+        if (err3) throw err3;
+
+        const staffMap = {};
+        staffData.forEach(s => { staffMap[s.staff_id] = s; });
+
+        let present = 0, leave = 0, absent = 0;
+        attData.forEach(a => {
+            const s = normalizeStatus(a.status);
+            if (s === 'present') present++;
+            else if (s === 'leave') leave++;
+            else if (s === 'absent') absent++;
+        });
+
+        document.getElementById('dashTotalStaff').textContent = totalStaff ?? 0;
+        document.getElementById('dashPresentToday').textContent = present;
+        document.getElementById('dashOnLeave').textContent = leave;
+        document.getElementById('dashAbsent').textContent = absent;
+
+        const tbody = document.getElementById('dashboardAttendanceBody');
+        if (!attData.length) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#94a3b8;">No attendance records for today.</td></tr>';
+        } else {
+            tbody.innerHTML = attData.slice(0, 5).map(a => {
+                const staff = staffMap[a.staff_id] || {};
+                const name = staff.name || 'Unknown';
+                const initials = name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+                const time = a.check_in ? new Date(a.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+                const s = normalizeStatus(a.status);
+                const badgeClass = s === 'present' ? 'present' : s === 'leave' ? 'leave' : s === 'week_off' ? 'weekoff' : 'absent';
+                const label = s === 'week_off' ? 'Week Off' : (a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : '—');
+                return `<tr>
+                    <td><div class="staff-name"><div class="small-avatar">${initials}</div>${name}</div></td>
+                    <td>${time}</td>
+                    <td><span class="badge ${badgeClass}">${label}</span></td>
+                </tr>`;
+            }).join('');
+        }
+
+        showGlobalStatus('Dashboard loaded from Supabase', 'success');
+    } catch (err) {
+        console.error('Dashboard load error:', err);
+        showGlobalStatus('Error loading dashboard: ' + err.message, 'error');
+    }
+}
+
+/* ================================================================
+   STAFF
+   ================================================================ */
+async function loadStaff() {
+    const tbody = document.getElementById('staffTableBody');
+    try {
+        const { data, error } = await _supabase
+            .from('staff')
+            .select('*')
+            .order('staff_id', { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || !data.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">No staff records found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.map(s => {
+            const initials = (s.name || '??').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+            return `<tr>
+                <td>${s.staff_id || s.id}</td>
+                <td><div class="staff-name"><div class="small-avatar">${initials}</div>${s.name || '—'}</div></td>
+                <td>${s.role || '—'}</td>
+                <td>${s.department || '—'}</td>
+                <td>${s.joined_date || '—'}</td>
+                <td>${s.daily_rate != null ? '₹' + s.daily_rate : '—'}</td>
+                <td style="text-align:right;white-space:nowrap;">
+                    <button class="action-btn edit" title="Edit" onclick='openEditStaff(${JSON.stringify(s)})'>✏️</button>
+                    <button class="action-btn delete" title="Delete" onclick='openDeleteStaff(${JSON.stringify(s)})'>🗑️</button>
+                </td>
+            </tr>`;
+        }).join('');
+
+        showGlobalStatus('Staff loaded from Supabase', 'success');
+    } catch (err) {
+        console.error('Staff load error:', err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#dc2626;">Error loading staff data.</td></tr>';
+        showGlobalStatus('Error loading staff: ' + err.message, 'error');
+    }
+}
+
+/* ================================================================
+   ATTENDANCE — DAY VIEW
+   ================================================================ */
+let currentAttendanceDate = new Date().toISOString().split('T')[0];
+let attendanceView = 'day';
+
+async function loadAttendance() {
+    const tbody = document.getElementById('attendanceTableBody');
+    const dateInput = document.getElementById('attendanceDate');
+    if (dateInput) currentAttendanceDate = dateInput.value || currentAttendanceDate;
+
+    try {
+        const { data, error } = await _supabase
+            .from('attendance')
+            .select('id, staff_id, date, status, check_in, check_out')
+            .eq('date', currentAttendanceDate)
+            .order('id', { ascending: true });
+
+        if (error) throw error;
+
+        const { data: staffData, error: staffErr } = await _supabase
+            .from('staff')
+            .select('id, staff_id, name');
+        if (staffErr) throw staffErr;
+
+        const staffMap = {};
+        staffData.forEach(s => { staffMap[s.staff_id] = s; });
+
+        let present = 0, leave = 0, absent = 0;
+        data.forEach(a => {
+            const s = normalizeStatus(a.status);
+            if (s === 'present') present++;
+            else if (s === 'leave') leave++;
+            else if (s === 'absent') absent++;
+        });
+        document.getElementById('attPresentToday').textContent = present;
+        document.getElementById('attAbsentToday').textContent = absent;
+        document.getElementById('attOnLeave').textContent = leave;
+
+        if (!data || !data.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No attendance records for this date.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.map(a => {
+            const staff = staffMap[a.staff_id] || {};
+            const staffCode = staff.staff_id || a.staff_id || '—';
+            const name = staff.name || 'Unknown';
+            const checkIn = a.check_in ? new Date(a.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+            const checkOut = a.check_out ? new Date(a.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+            const s = normalizeStatus(a.status);
+            const badgeClass = s === 'present' ? 'present' : s === 'leave' ? 'leave' : s === 'week_off' ? 'weekoff' : 'absent';
+            const label = s === 'week_off' ? 'Week Off' : (a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : '—');
+            return `<tr>
+                <td>${staffCode}</td>
+                <td>${name}</td>
+                <td>${checkIn}</td>
+                <td>${checkOut}</td>
+                <td><span class="badge ${badgeClass}">${label}</span></td>
+                <td style="text-align:right;white-space:nowrap;">
+                    <button class="action-btn delete" title="Delete"
+                            onclick='openDeleteAttendance(${JSON.stringify({
+                                id: a.id,
+                                staff_id: staffCode,
+                                name: name,
+                                date: a.date,
+                                status: a.status
+                            })})'>🗑️</button>
+                </td>
+            </tr>`;
+        }).join('');
+
+        showGlobalStatus('Attendance loaded from Supabase', 'success');
+    } catch (err) {
+        console.error('Attendance load error:', err);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626;">Error loading attendance.</td></tr>';
+        showGlobalStatus('Error loading attendance: ' + err.message, 'error');
+    }
+}
+
+// Date change listener
+const attendanceDateInput = document.getElementById('attendanceDate');
+if (attendanceDateInput) {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    attendanceDateInput.value = `${year}-${month}-${day}`;
+    currentAttendanceDate = attendanceDateInput.value;
+
+    attendanceDateInput.addEventListener('change', () => {
+        currentAttendanceDate = attendanceDateInput.value;
+        loadAttendance();
+    });
+}
+
+/* ================================================================
+   ATTENDANCE VIEW TOGGLE
+   ================================================================ */
+function switchAttendanceView(view) {
+    attendanceView = view;
+
+    document.getElementById('tabDay').classList.toggle('active', view === 'day');
+    document.getElementById('tabMonth').classList.toggle('active', view === 'month');
+
+    document.getElementById('attendanceDayView').style.display =
+        view === 'day' ? 'block' : 'none';
+    document.getElementById('attendanceMonthView').style.display =
+        view === 'month' ? 'block' : 'none';
+
+    if (view === 'day') loadAttendance();
+    if (view === 'month') loadMonthAttendance();
+}
+
+/* ================================================================
+   ATTENDANCE — MONTH VIEW
+   ================================================================ */
+async function loadMonthAttendance() {
+    const monthInput = document.getElementById('attendanceMonth');
+    const monthValue = monthInput.value;
+    if (!monthValue) return;
+
+    const [year, month] = monthValue.split('-').map(Number);
+    const firstDay = `${monthValue}-01`;
+    const lastDayDate = new Date(year, month, 0);
+    const lastDay = `${monthValue}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+
+    const staffBody = document.getElementById('monthStaffBody');
+    const dailyBody = document.getElementById('monthDailyBody');
+    staffBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;">Loading…</td></tr>';
+    dailyBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">Loading…</td></tr>';
+
+    try {
+        const { data: attData, error: attErr } = await _supabase
+            .from('attendance')
+            .select('id, staff_id, date, status')
+            .gte('date', firstDay)
+            .lte('date', lastDay)
+            .order('date', { ascending: true });
+
+        if (attErr) throw attErr;
+
+        const { data: staffData, error: staffErr } = await _supabase
+            .from('staff')
+            .select('id, staff_id, name, role, department');
+        if (staffErr) throw staffErr;
+
+        const staffMap = {};
+        staffData.forEach(s => { staffMap[s.staff_id] = s; });
+
+        let totalPresent = 0, totalAbsent = 0, totalLeave = 0;
+        attData.forEach(a => {
+            const s = normalizeStatus(a.status);
+            if (s === 'present') totalPresent++;
+            else if (s === 'absent') totalAbsent++;
+            else if (s === 'leave') totalLeave++;
+        });
+        document.getElementById('monthTotalPresent').textContent = totalPresent;
+        document.getElementById('monthTotalAbsent').textContent = totalAbsent;
+        document.getElementById('monthTotalLeave').textContent = totalLeave;
+
+        // Per-staff summary
+        const perStaff = {};
+        attData.forEach(a => {
+            const key = a.staff_id;
+            if (!perStaff[key]) perStaff[key] = { present: 0, absent: 0, leave: 0, week_off: 0, total: 0 };
+            const s = normalizeStatus(a.status);
+            if (s === 'present') perStaff[key].present++;
+            else if (s === 'absent') perStaff[key].absent++;
+            else if (s === 'leave') perStaff[key].leave++;
+            else if (s === 'week_off') perStaff[key].week_off++;
+            perStaff[key].total++;
+        });
+
+        const staffRows = Object.entries(perStaff)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([staffCode, counts]) => {
+                const info = staffMap[staffCode] || {};
+                return `<tr>
+                    <td>${staffCode}</td>
+                    <td>${info.name || 'Unknown'}</td>
+                    <td><span class="badge present">${counts.present}</span></td>
+                    <td><span class="badge absent">${counts.absent}</span></td>
+                    <td><span class="badge leave">${counts.leave}</span></td>
+                    <td><span class="badge weekoff">${counts.week_off}</span></td>
+                    <td><strong>${counts.total}</strong></td>
+                    <td style="text-align:right;white-space:nowrap;">
+                        <button class="action-btn edit" title="View Details"
+                                onclick='openStaffAttendanceDetail(${JSON.stringify({
+                                    staff_id: staffCode,
+                                    name: info.name || 'Unknown',
+                                    role: info.role || '',
+                                    department: info.department || ''
+                                })})'>🔍</button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+        staffBody.innerHTML = staffRows ||
+            '<tr><td colspan="8" style="text-align:center;color:#94a3b8;">No records this month.</td></tr>';
+
+        // Daily breakdown
+        const perDay = {};
+        attData.forEach(a => {
+            const key = a.date;
+            if (!perDay[key]) perDay[key] = { present: 0, absent: 0, leave: 0, total: 0 };
+            const s = normalizeStatus(a.status);
+            if (s === 'present') perDay[key].present++;
+            else if (s === 'absent') perDay[key].absent++;
+            else if (s === 'leave') perDay[key].leave++;
+            perDay[key].total++;
+        });
+
+        const dayRows = Object.entries(perDay)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([date, counts]) => {
+                const display = new Date(date).toLocaleDateString(undefined, {
+                    weekday: 'short', day: '2-digit', month: 'short'
+                });
+                return `<tr>
+                    <td>${display}</td>
+                    <td><span class="badge present">${counts.present}</span></td>
+                    <td><span class="badge absent">${counts.absent}</span></td>
+                    <td><span class="badge leave">${counts.leave}</span></td>
+                    <td><strong>${counts.total}</strong></td>
+                </tr>`;
+            }).join('');
+
+        dailyBody.innerHTML = dayRows ||
+            '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">No records this month.</td></tr>';
+
+        showGlobalStatus(`Month data loaded (${attData.length} records)`, 'success');
+    } catch (err) {
+        console.error('Month attendance error:', err);
+        staffBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;">Error loading month data.</td></tr>';
+        dailyBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#dc2626;">Error loading month data.</td></tr>';
+        showGlobalStatus('Error loading month attendance: ' + err.message, 'error');
+    }
+}
+
+// Default month input
+const monthInput = document.getElementById('attendanceMonth');
+if (monthInput) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    monthInput.value = `${y}-${m}`;
+
+    monthInput.addEventListener('change', () => {
+        if (attendanceView === 'month') loadMonthAttendance();
+    });
+}
+
+/* ================================================================
+   STAFF ATTENDANCE DETAIL
+   ================================================================ */
+let currentStaffDetailCode = null;
+let currentStaffDetail = null;
+
+function openStaffAttendanceDetail(staff) {
+    currentStaffDetailCode = staff.staff_id;
+    currentStaffDetail = { ...staff };
+
+    document.getElementById('staffDetailName').textContent = staff.name || 'Staff';
+    document.getElementById('staffDetailMeta').textContent =
+        `${staff.staff_id || ''}${staff.role ? ' · ' + staff.role : ''}${staff.department ? ' · ' + staff.department : ''}`;
+
+    const monthInput = document.getElementById('staffDetailMonth');
+    if (!monthInput.value) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        monthInput.value = `${y}-${m}`;
+    }
+
+    document.getElementById('staffAttDetailModal').classList.add('show');
+
+    loadStaffDetailMonth();
+}
+
+function closeStaffDetailModal() {
+    document.getElementById('staffAttDetailModal').classList.remove('show');
+    currentStaffDetailCode = null;
+    currentStaffDetail = null;
+}
+
+async function loadStaffDetailMonth() {
+    if (!currentStaffDetailCode) return;
+
+    const monthInput = document.getElementById('staffDetailMonth');
+    const monthValue = monthInput.value;
+    if (!monthValue) return;
+
+    const [year, month] = monthValue.split('-').map(Number);
+    const firstDay = `${monthValue}-01`;
+    const lastDayDate = new Date(year, month, 0);
+    const lastDay = `${monthValue}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+
+    const tbody = document.getElementById('staffDetailBody');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;">Loading…</td></tr>';
+
+    try {
+        const { data, error } = await _supabase
+            .from('attendance')
+            .select('id, staff_id, date, status, check_in, check_out')
+            .eq('staff_id', currentStaffDetailCode)
+            .gte('date', firstDay)
+            .lte('date', lastDay)
+            .order('date', { ascending: true });
+
+        if (error) throw error;
+
+        let present = 0, absent = 0, leave = 0, weekOff = 0;
+        data.forEach(a => {
+            const s = normalizeStatus(a.status);
+            if (s === 'present') present++;
+            else if (s === 'absent') absent++;
+            else if (s === 'leave') leave++;
+            else if (s === 'week_off') weekOff++;
+        });
+
+        document.getElementById('staffDetailPresent').textContent = present;
+        document.getElementById('staffDetailAbsent').textContent = absent;
+        document.getElementById('staffDetailLeave').textContent = leave;
+        document.getElementById('staffDetailWeekOff').textContent = weekOff;
+
+        // Fetch daily rate
+        let dailyRate = 0;
+        try {
+            const { data: staffRow } = await _supabase
+                .from('staff')
+                .select('daily_rate')
+                .eq('staff_id', currentStaffDetailCode)
+                .maybeSingle();
+            dailyRate = (staffRow && staffRow.daily_rate) ? Number(staffRow.daily_rate) : 0;
+        } catch (err) { console.warn('Rate lookup failed:', err); }
+
+        const paidDays = present + weekOff;
+        const totalAmount = paidDays * dailyRate;
+        document.getElementById('staffDetailTotal').textContent =
+            '₹' + totalAmount.toLocaleString('en-IN');
+
+        currentStaffDetail = {
+            ...(currentStaffDetail || {}),
+            daily_rate: dailyRate,
+            present_days: present,
+            week_off_count: weekOff,
+            paid_days: paidDays,
+            total_amount: totalAmount,
+            month: monthValue
+        };
+
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;">No records this month.</td></tr>';
+            showGlobalStatus(`No records for ${currentStaffDetailCode} this month`, 'info');
+            return;
+        }
+
+        tbody.innerHTML = data.map(a => {
+            const display = new Date(a.date).toLocaleDateString(undefined, {
+                weekday: 'short', day: '2-digit', month: 'short'
+            });
+            const s = normalizeStatus(a.status);
+
+            const checkIn = a.check_in
+                ? new Date(a.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '—';
+            const checkOut = a.check_out
+                ? new Date(a.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '—';
+
+            let badgeClass, label;
+            if (s === 'present') { badgeClass = 'present'; label = 'Present'; }
+            else if (s === 'leave') { badgeClass = 'leave'; label = 'Leave'; }
+            else if (s === 'week_off') { badgeClass = 'weekoff'; label = 'Week Off'; }
+            else { badgeClass = 'absent'; label = 'Absent'; }
+
+            return `<tr>
+                <td>${display}</td>
+                <td>${checkIn}</td>
+                <td>${checkOut}</td>
+                <td><span class="badge ${badgeClass}">${label}</span></td>
+            </tr>`;
+        }).join('');
+
+        showGlobalStatus(`Loaded ${data.length} records for ${currentStaffDetailCode}`, 'success');
+    } catch (err) {
+        console.error('Staff detail load error:', err);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#dc2626;">Error loading records.</td></tr>';
+        showGlobalStatus('Error loading staff detail: ' + err.message, 'error');
+    }
+}
+
+const staffDetailMonthInput = document.getElementById('staffDetailMonth');
+if (staffDetailMonthInput) {
+    staffDetailMonthInput.addEventListener('change', loadStaffDetailMonth);
+}
+
+/* ================================================================
+   PRINT SALARY SLIP
+   ================================================================ */
+async function printSalarySlip() {
+    if (!currentStaffDetail || !currentStaffDetailCode) {
+        showGlobalStatus('No staff selected.', 'error');
+        return;
+    }
+
+    const monthValue = currentStaffDetail.month
+        || document.getElementById('staffDetailMonth').value;
+    const [year, month] = monthValue.split('-').map(Number);
+    const monthName = new Date(year, month - 1, 1)
+        .toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+    let company = { name: 'StaffPro', address: '' };
+    try {
+        const { data } = await _supabase
+            .from('company')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+        if (data) company = data;
+    } catch (err) { console.warn('Company lookup failed:', err); }
+
+    const firstDay = `${monthValue}-01`;
+    const lastDayDate = new Date(year, month, 0);
+    const lastDay = `${monthValue}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+
+    let present = 0, absent = 0, leave = 0, weekOff = 0;
+    let attRecords = [];
+
+    try {
+        const { data, error } = await _supabase
+            .from('attendance')
+            .select('date, status, check_in, check_out')
+            .eq('staff_id', currentStaffDetailCode)
+            .gte('date', firstDay)
+            .lte('date', lastDay)
+            .order('date', { ascending: true });
+
+        if (error) throw error;
+
+        attRecords = data;
+        data.forEach(a => {
+            const s = normalizeStatus(a.status);
+            if (s === 'present') present++;
+            else if (s === 'absent') absent++;
+            else if (s === 'leave') leave++;
+            else if (s === 'week_off') weekOff++;
+        });
+    } catch (err) {
+        console.error('Salary slip fetch error:', err);
+        showGlobalStatus('Error fetching attendance for slip: ' + err.message, 'error');
+        return;
+    }
+
+    if (!attRecords.length) {
+        showGlobalStatus('No records to print for this month.', 'error');
+        return;
+    }
+
+    const dailyRate = currentStaffDetail.daily_rate || 0;
+    const paidDays = present + weekOff;
+    const totalAmount = paidDays * dailyRate;
+
+    const rows = attRecords.map(a => {
+        const display = new Date(a.date).toLocaleDateString(undefined, {
+            weekday: 'short', day: '2-digit', month: 'short'
+        });
+        const s = normalizeStatus(a.status);
+        const checkIn = a.check_in ? new Date(a.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+        const checkOut = a.check_out ? new Date(a.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+
+        let statusLabel, statusColor = '#1e293b';
+        if (s === 'present') statusLabel = 'Present';
+        else if (s === 'absent') { statusLabel = 'Absent'; statusColor = '#dc2626'; }
+        else if (s === 'leave') { statusLabel = 'Leave'; statusColor = '#b45309'; }
+        else if (s === 'week_off') { statusLabel = 'Week Off'; statusColor = '#4338ca'; }
+        else statusLabel = a.status;
+
+        return `<tr>
+            <td>${display}</td>
+            <td>${checkIn}</td>
+            <td>${checkOut}</td>
+            <td style="color:${statusColor};font-weight:600;">${statusLabel}</td>
+        </tr>`;
+    }).join('');
+
+    const printWindow = window.open('', '_blank', 'width=800,height=900');
+    if (!printWindow) {
+        showGlobalStatus('Please allow pop-ups to print the salary slip.', 'error');
+        return;
+    }
+
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Salary Slip · ${currentStaffDetail.name} · ${monthName}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding: 40px; max-width: 800px; margin: 0 auto; }
+        .header { text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 15px; margin-bottom: 25px; }
+        .header h1 { font-size: 26px; margin-bottom: 5px; color: #1d4ed8; }
+        .header p { font-size: 13px; color: #64748b; margin: 2px 0; }
+        .slip-title { text-align: center; font-size: 18px; font-weight: 600; background: #eff6ff; padding: 10px; border-radius: 8px; margin-bottom: 25px; color: #1d4ed8; letter-spacing: 1px; }
+        .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        .meta-block h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 8px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+        .meta-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; }
+        .meta-row span:first-child { color: #64748b; }
+        .meta-row span:last-child { font-weight: 600; }
+        .summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 25px; }
+        .summary-box { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; text-align: center; }
+        .summary-box p { font-size: 10px; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
+        .summary-box h2 { font-size: 20px; color: #1e293b; }
+        .summary-box.total { background: #dbeafe; border-color: #93c5fd; }
+        .summary-box.total h2 { color: #1d4ed8; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 25px; }
+        thead { background: #f8fafc; }
+        th { padding: 10px; text-align: left; color: #64748b; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; }
+        td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
+        tfoot td { padding: 10px; border-top: 2px solid #2563eb; font-weight: 700; background: #f8fafc; }
+        .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 60px; font-size: 12px; }
+        .sig { text-align: center; border-top: 1px solid #1e293b; padding-top: 6px; color: #64748b; }
+        .footer-note { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 40px; font-style: italic; }
+        @media print { body { padding: 20px; } .no-print { display: none; } }
+        .print-actions { text-align: center; margin-bottom: 20px; }
+        .print-actions button { background: #2563eb; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; margin: 0 5px; }
+        .print-actions button.secondary { background: #f1f5f9; color: #334155; }
+    </style>
+</head>
+<body>
+    <div class="print-actions no-print">
+        <button onclick="window.print()">🖨️ Print Now</button>
+        <button class="secondary" onclick="window.close()">Close</button>
+    </div>
+
+    <div class="header">
+        <h1>${company.name || 'StaffPro'}</h1>
+        ${company.address ? `<p>${String(company.address).replace(/\n/g, '<br>')}</p>` : ''}
+        ${company.phone ? `<p>Phone: ${company.phone}</p>` : ''}
+        ${company.email ? `<p>Email: ${company.email}</p>` : ''}
+    </div>
+
+    <div class="slip-title">SALARY SLIP — ${monthName.toUpperCase()}</div>
+
+    <div class="meta">
+        <div class="meta-block">
+            <h3>Employee Details</h3>
+            <div class="meta-row"><span>Staff ID</span><span>${currentStaffDetail.staff_id || '—'}</span></div>
+            <div class="meta-row"><span>Name</span><span>${currentStaffDetail.name || '—'}</span></div>
+            <div class="meta-row"><span>Role</span><span>${currentStaffDetail.role || '—'}</span></div>
+            <div class="meta-row"><span>Department</span><span>${currentStaffDetail.department || '—'}</span></div>
+        </div>
+
+        <div class="meta-block">
+            <h3>Payment Details</h3>
+            <div class="meta-row"><span>Month</span><span>${monthName}</span></div>
+            <div class="meta-row"><span>Daily Rate</span><span>₹${dailyRate.toLocaleString('en-IN')}</span></div>
+            <div class="meta-row"><span>Paid Days</span><span>${paidDays}</span></div>
+            <div class="meta-row"><span>Week Offs</span><span>${weekOff}</span></div>
+        </div>
+    </div>
+
+    <div class="summary">
+        <div class="summary-box"><p>Present</p><h2>${present}</h2></div>
+        <div class="summary-box"><p>Absent</p><h2>${absent}</h2></div>
+        <div class="summary-box"><p>Leave</p><h2>${leave}</h2></div>
+        <div class="summary-box"><p>Week Offs</p><h2>${weekOff}</h2></div>
+        <div class="summary-box total"><p>Total</p><h2>₹${totalAmount.toLocaleString('en-IN')}</h2></div>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" style="text-align:right;">
+                    Total Payable (${present} Present + ${weekOff} Week Offs = ${paidDays} days × ₹${dailyRate.toLocaleString('en-IN')})
+                </td>
+                <td>₹${totalAmount.toLocaleString('en-IN')}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="signatures">
+        <div class="sig">Employee Signature</div>
+        <div class="sig">Authorized Signatory</div>
+    </div>
+
+    <div class="footer-note">
+        This is a computer-generated salary slip. Generated on ${new Date().toLocaleDateString()}.
+    </div>
+</body>
+</html>
+    `);
+
+    printWindow.document.close();
+}
+
+/* ================================================================
+   COMPANY
+   ================================================================ */
+async function loadCompany() {
+    try {
+        const { data, error } = await _supabase
+            .from('company')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+            document.getElementById('companyName').value = data.name || '';
+            document.getElementById('companyReg').value = data.reg_number || '';
+            document.getElementById('companyPhone').value = data.phone || '';
+            document.getElementById('companyEmail').value = data.email || '';
+            document.getElementById('companyWebsite').value = data.website || '';
+            document.getElementById('companyGstin').value = data.gstin || '';
+            document.getElementById('companyAddress').value = data.address || '';
+            document.getElementById('companyLogoName').textContent = data.name || 'StaffPro';
+            showGlobalStatus('Company info loaded from Supabase', 'success');
+        } else {
+            showGlobalStatus('No company record found. Default values shown.', 'info');
+        }
+    } catch (err) {
+        console.error('Company load error:', err);
+        showGlobalStatus('Error loading company info: ' + err.message, 'error');
+    }
+}
+
+async function saveCompany() {
+    const payload = {
+        name: document.getElementById('companyName').value.trim(),
+        reg_number: document.getElementById('companyReg').value.trim(),
+        phone: document.getElementById('companyPhone').value.trim(),
+        email: document.getElementById('companyEmail').value.trim(),
+        website: document.getElementById('companyWebsite').value.trim(),
+        gstin: document.getElementById('companyGstin').value.trim(),
+        address: document.getElementById('companyAddress').value.trim(),
+    };
+
+    try {
+        const { data: existing, error: fetchErr } = await _supabase
+            .from('company')
+            .select('id')
+            .limit(1)
+            .maybeSingle();
+
+        if (fetchErr) throw fetchErr;
+
+        let result;
+        if (existing) {
+            result = await _supabase
+                .from('company')
+                .update(payload)
+                .eq('id', existing.id)
+                .select();
+        } else {
+            result = await _supabase
+                .from('company')
+                .insert([payload])
+                .select();
+        }
+
+        if (result.error) throw result.error;
+
+        document.getElementById('companyLogoName').textContent = payload.name || 'StaffPro';
+        showGlobalStatus('Company information saved to Supabase!', 'success');
+    } catch (err) {
+        console.error('Company save error:', err);
+        showGlobalStatus('Error saving company: ' + err.message, 'error');
+    }
+}
+
+/* ================================================================
+   ADD STAFF
+   ================================================================ */
+async function addStaff() {
+    document.getElementById('addStaffName').value = '';
+    document.getElementById('addStaffRole').value = '';
+    document.getElementById('addStaffDept').value = '';
+    document.getElementById('addStaffRate').value = '';
+
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('addStaffJoined').value = today;
+
+    document.getElementById('addStaffCode').value = 'Generating…';
+    document.getElementById('addStaffModal').classList.add('show');
+
+    try {
+        const nextId = await generateNextStaffId();
+        document.getElementById('addStaffCode').value = nextId;
+    } catch (err) {
+        console.error('Failed to generate staff ID:', err);
+        document.getElementById('addStaffCode').value = 'KCST-???';
+    }
+
+    setTimeout(() => document.getElementById('addStaffName').focus(), 100);
+}
+
+function closeAddModal() {
+    document.getElementById('addStaffModal').classList.remove('show');
+}
+
+async function generateNextStaffId() {
+    const { data: maxRow } = await _supabase
+        .from('staff')
+        .select('staff_id')
+        .order('staff_id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    let nextId = 'KCST-001';
+    if (maxRow && maxRow.staff_id) {
+        const match = maxRow.staff_id.match(/^(.*?)(\d+)$/);
+        if (match) {
+            const prefix = match[1];
+            const num = parseInt(match[2], 10);
+            const padLen = match[2].length;
+            nextId = prefix + String(num + 1).padStart(padLen, '0');
+        } else {
+            nextId = maxRow.staff_id + '-1';
+        }
+    }
+    return nextId;
+}
+
+async function saveNewStaff() {
+    const name = document.getElementById('addStaffName').value.trim();
+    const role = document.getElementById('addStaffRole').value.trim();
+    const department = document.getElementById('addStaffDept').value.trim();
+    const joined = document.getElementById('addStaffJoined').value || null;
+    const rateInput = document.getElementById('addStaffRate').value;
+    const rate = rateInput !== '' ? parseFloat(rateInput) : null;
+
+    if (!name) {
+        showGlobalStatus('Please enter a staff name.', 'error');
+        document.getElementById('addStaffName').focus();
+        return;
+    }
+
+    let staffId;
+    try {
+        staffId = await generateNextStaffId();
+    } catch (err) {
+        showGlobalStatus('Could not generate staff ID: ' + err.message, 'error');
+        return;
+    }
+
+    const saveBtn = document.getElementById('addStaffSaveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+        const { error } = await _supabase
+            .from('staff')
+            .insert([{
+                staff_id: staffId,
+                name: name,
+                role: role,
+                department: department,
+                joined_date: joined,
+                daily_rate: rate
+            }]);
+
+        if (error) throw error;
+
+        closeAddModal();
+        showGlobalStatus(`Staff "${name}" added as ${staffId}`, 'success');
+        loadStaff();
+        loadDashboard();
+    } catch (err) {
+        console.error('Add staff error:', err);
+        showGlobalStatus('Error adding staff: ' + err.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '➕ Add Staff';
+    }
+}
+
+/* ================================================================
+   MARK ATTENDANCE
+   ================================================================ */
+async function markAttendance() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('markDate').value = today;
+
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('markCheckIn').value = `${hh}:${mm}`;
+    document.getElementById('markCheckOut').value = '';
+
+    document.getElementById('markStatus').value = 'present';
+
+    document.getElementById('markAttendanceModal').classList.add('show');
+
+    const select = document.getElementById('markStaffSelect');
+    select.innerHTML = '<option value="">— Loading staff… —</option>';
+
+    try {
+        const { data, error } = await _supabase
+            .from('staff')
+            .select('staff_id, name, role')
+            .order('staff_id', { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || !data.length) {
+            select.innerHTML = '<option value="">— No staff found —</option>';
+            return;
+        }
+
+        select.innerHTML = '<option value="">— Select staff —</option>' +
+            data.map(s => {
+                const label = `${s.staff_id} · ${s.name}${s.role ? ' (' + s.role + ')' : ''}`;
+                return `<option value="${s.staff_id}">${label}</option>`;
+            }).join('');
+    } catch (err) {
+        console.error('Load staff for attendance error:', err);
+        select.innerHTML = '<option value="">— Error loading staff —</option>';
+        showGlobalStatus('Error loading staff list: ' + err.message, 'error');
+    }
+}
+
+function closeMarkModal() {
+    document.getElementById('markAttendanceModal').classList.remove('show');
+}
+
+async function saveAttendance() {
+    const staffId = document.getElementById('markStaffSelect').value;
+    const date = document.getElementById('markDate').value;
+    const status = document.getElementById('markStatus').value;
+    const checkInTime = document.getElementById('markCheckIn').value;
+    const checkOutTime = document.getElementById('markCheckOut').value;
+
+    if (!staffId) {
+        showGlobalStatus('Please select a staff member.', 'error');
+        return;
+    }
+    if (!date) {
+        showGlobalStatus('Please pick a date.', 'error');
+        return;
+    }
+
+    let checkInIso = null;
+    let checkOutIso = null;
+
+    if (status === 'present' && checkInTime) {
+        checkInIso = new Date(`${date}T${checkInTime}:00`).toISOString();
+    }
+    if (status === 'present' && checkOutTime) {
+        checkOutIso = new Date(`${date}T${checkOutTime}:00`).toISOString();
+    }
+
+    const payload = {
+        staff_id: staffId,
+        date: date,
+        status: status,
+        check_in: checkInIso,
+        check_out: checkOutIso
+    };
+
+    const saveBtn = document.getElementById('markSaveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+        const { error } = await _supabase
+            .from('attendance')
+            .upsert([payload], { onConflict: 'staff_id,date' });
+
+        if (error) throw error;
+
+        closeMarkModal();
+        showGlobalStatus(`Attendance saved for ${staffId} (${status})`, 'success');
+
+        if (date === currentAttendanceDate) loadAttendance();
+        if (attendanceView === 'month') loadMonthAttendance();
+        loadDashboard();
+    } catch (err) {
+        console.error('Save attendance error:', err);
+        showGlobalStatus('Error saving attendance: ' + err.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '🕒 Save Attendance';
+    }
+}
+
+/* ================================================================
+   STAFF EDIT / DELETE
+   ================================================================ */
+function openEditStaff(staff) {
+    document.getElementById('editStaffId').value = staff.id;
+    document.getElementById('editStaffCode').value = staff.staff_id || staff.id;
+    document.getElementById('editStaffName').value = staff.name || '';
+    document.getElementById('editStaffRole').value = staff.role || '';
+    document.getElementById('editStaffDept').value = staff.department || '';
+    document.getElementById('editStaffJoined').value = staff.joined_date || '';
+    document.getElementById('editStaffRate').value = staff.daily_rate ?? '';
+
+    document.getElementById('editStaffModal').classList.add('show');
+}
+
+function closeEditModal() {
+    document.getElementById('editStaffModal').classList.remove('show');
+}
+
+async function saveStaffEdit() {
+    const id = document.getElementById('editStaffId').value;
+    const payload = {
+        name: document.getElementById('editStaffName').value.trim(),
+        role: document.getElementById('editStaffRole').value.trim(),
+        department: document.getElementById('editStaffDept').value.trim(),
+        joined_date: document.getElementById('editStaffJoined').value || null,
+        daily_rate: parseFloat(document.getElementById('editStaffRate').value) || null,
+    };
+
+    if (!payload.name) {
+        showGlobalStatus('Staff name cannot be empty.', 'error');
+        return;
+    }
+
+    try {
+        const { error } = await _supabase
+            .from('staff')
+            .update(payload)
+            .eq('id', id);
+
+        if (error) throw error;
+
+        closeEditModal();
+        showGlobalStatus('Staff updated successfully!', 'success');
+        loadStaff();
+        loadDashboard();
+    } catch (err) {
+        console.error('Update staff error:', err);
+        showGlobalStatus('Error updating staff: ' + err.message, 'error');
+    }
+}
+
+function openDeleteStaff(staff) {
+    document.getElementById('deleteStaffId').value = staff.id;
+    document.getElementById('deleteStaffName').textContent = staff.name;
+    document.getElementById('deleteStaffModal').classList.add('show');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteStaffModal').classList.remove('show');
+}
+
+async function confirmDeleteStaff() {
+    const id = document.getElementById('deleteStaffId').value;
+    try {
+        const { error } = await _supabase
+            .from('staff')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        closeDeleteModal();
+        showGlobalStatus('Staff deleted successfully!', 'success');
+        loadStaff();
+        loadDashboard();
+    } catch (err) {
+        console.error('Delete staff error:', err);
+        showGlobalStatus('Error deleting staff: ' + err.message, 'error');
+    }
+}
+
+/* ================================================================
+   DELETE ATTENDANCE
+   ================================================================ */
+function openDeleteAttendance(att) {
+    document.getElementById('deleteAttId').value = att.id;
+    document.getElementById('deleteAttName').textContent = att.name || att.staff_id || 'this staff';
+    document.getElementById('deleteAttDate').textContent = att.date || '—';
+    document.getElementById('deleteAttendanceModal').classList.add('show');
+}
+
+function closeDeleteAttendanceModal() {
+    document.getElementById('deleteAttendanceModal').classList.remove('show');
+}
+
+async function confirmDeleteAttendance() {
+    const id = document.getElementById('deleteAttId').value;
+    if (!id) return;
+
+    try {
+        const { error } = await _supabase
+            .from('attendance')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        closeDeleteAttendanceModal();
+        showGlobalStatus('Attendance record deleted.', 'success');
+        loadAttendance();
+        if (attendanceView === 'month') loadMonthAttendance();
+        loadDashboard();
+    } catch (err) {
+        console.error('Delete attendance error:', err);
+        showGlobalStatus('Error deleting attendance: ' + err.message, 'error');
+    }
+}
+
+/* ================================================================
+   MODAL BACKDROP / ESC CLOSE
+   ================================================================ */
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'addStaffModal') closeAddModal();
+    if (e.target.id === 'editStaffModal') closeEditModal();
+    if (e.target.id === 'deleteStaffModal') closeDeleteModal();
+    if (e.target.id === 'markAttendanceModal') closeMarkModal();
+    if (e.target.id === 'deleteAttendanceModal') closeDeleteAttendanceModal();
+    if (e.target.id === 'staffAttDetailModal') closeStaffDetailModal();
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeAddModal();
+        closeEditModal();
+        closeDeleteModal();
+        closeMarkModal();
+        closeDeleteAttendanceModal();
+        closeStaffDetailModal();
+    }
+});
+
+/* ================================================================
+   SETTINGS
+   ================================================================ */
+function toggleSetting(element) {
+    element.classList.toggle("active");
+}
+
+function toggleDarkMode(element) {
+    element.classList.toggle("active");
+    document.body.classList.toggle("dark-mode");
+}
+
+function saveSettings() {
+    const toggles = document.querySelectorAll('.toggle');
+    const states = Array.from(toggles).map(t => t.classList.contains('active'));
+    localStorage.setItem('staffpro_settings', JSON.stringify(states));
+    showGlobalStatus('Settings saved locally.', 'success');
+}
+
+function backupData() {
+    showGlobalStatus('Backup request sent. (Connect to backend for real backup.)', 'info');
+}
+
+/* ================================================================
+   INITIALIZATION
+   ================================================================ */
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadDashboard();
+
+    setTimeout(() => { loadCompany(); }, 800);
+    setTimeout(() => { loadStaff(); }, 1200);
+    setTimeout(() => { loadAttendance(); }, 1600);
+
+    const saved = localStorage.getItem('staffpro_settings');
+    if (saved) {
+        const states = JSON.parse(saved);
+        document.querySelectorAll('.toggle').forEach((t, i) => {
+            if (states[i]) t.classList.add('active');
+            else t.classList.remove('active');
+        });
+    }
+
+    showGlobalStatus('Connected to Supabase · ' + SUPABASE_URL.split('//')[1], 'success');
+});
+</script>
+
+</body>
+</html>
