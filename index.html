@@ -5,983 +5,549 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KCST Staff Pro</title>
 
-<!-- Supabase JS library -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        font-family: "Segoe UI", Arial, sans-serif;
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Segoe UI", Arial, sans-serif; }
+    body { background: #f4f7fb; color: #1e293b; min-height: 100vh; }
+
+    /* ================= LOGIN SCREEN ================= */
+    #loginScreen {
+        position: fixed; inset: 0;
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        display: flex; justify-content: center; align-items: center;
+        z-index: 5000; padding: 20px;
     }
 
-    body {
-        background: #f4f7fb;
-        color: #1e293b;
-        min-height: 100vh;
+    .login-card {
+        background: white;
+        padding: 40px;
+        border-radius: 18px;
+        width: 100%; max-width: 400px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.4);
     }
 
-    /* ================= SIDEBAR ================= */
-
-    .sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        width: 250px;
-        height: 100vh;
-        background: linear-gradient(180deg, #111827, #1e293b);
-        color: white;
-        padding: 20px 15px;
-        z-index: 1000;
-        transition: 0.3s;
-    }
-
-    .logo {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px;
-        margin-bottom: 30px;
-    }
-
-    .logo-icon {
-        width: 45px;
-        height: 45px;
-        border-radius: 12px;
+    .login-logo {
+        width: 70px; height: 70px; margin: 0 auto 15px;
+        border-radius: 18px;
         background: linear-gradient(135deg, #2563eb, #7c3aed);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 22px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 32px; color: white;
     }
 
-    .logo h2 {
-        font-size: 19px;
-    }
+    .login-card h2 { text-align: center; font-size: 20px; color: #111827; }
+    .login-card .subtitle { text-align: center; color: #64748b; font-size: 13px; margin-top: 5px; margin-bottom: 25px; }
 
-    .logo span {
-        display: block;
-        color: #94a3b8;
-        font-size: 11px;
-        margin-top: 2px;
+    .login-field { margin-bottom: 15px; }
+    .login-field label {
+        display: block; font-size: 11px; color: #64748b;
+        margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
     }
-
-    .menu-title {
-        font-size: 11px;
-        color: #64748b;
-        padding: 0 12px;
-        margin: 15px 0 8px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .menu-item {
-        display: flex;
-        align-items: center;
-        gap: 13px;
-        padding: 13px 14px;
-        margin: 5px 0;
-        border-radius: 10px;
-        color: #cbd5e1;
-        text-decoration: none;
-        cursor: pointer;
+    .login-field input {
+        width: 100%; padding: 12px;
+        border: 1px solid #e2e8f0; border-radius: 9px;
+        font-size: 14px; background: #f8fafc; outline: none;
         transition: 0.2s;
     }
+    .login-field input:focus { border-color: #2563eb; background: white; }
 
-    .menu-item:hover {
-        background: rgba(255,255,255,0.08);
-        color: white;
+    .login-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #2563eb, #4f46e5);
+        color: white; border: none; border-radius: 10px;
+        padding: 13px; font-size: 14px; font-weight: 600;
+        cursor: pointer; margin-top: 8px;
+        transition: 0.2s;
+    }
+    .login-btn:hover { opacity: 0.92; }
+    .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    #loginError {
+        display: none;
+        background: #fee2e2; color: #991b1b;
+        padding: 10px; border-radius: 8px;
+        font-size: 13px; margin-bottom: 15px;
     }
 
+    .login-hint { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 18px; }
+
+    /* ================= SIDEBAR ================= */
+    .sidebar {
+        position: fixed; left: 0; top: 0;
+        width: 250px; height: 100vh;
+        background: linear-gradient(180deg, #111827, #1e293b);
+        color: white; padding: 20px 15px;
+        z-index: 1000; transition: 0.3s;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; padding: 10px; margin-bottom: 30px; }
+    .logo-icon {
+        width: 45px; height: 45px; border-radius: 12px;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        display: flex; justify-content: center; align-items: center;
+        font-size: 22px;
+    }
+    .logo h2 { font-size: 19px; }
+    .logo span { display: block; color: #94a3b8; font-size: 11px; margin-top: 2px; }
+    .menu-title {
+        font-size: 11px; color: #64748b;
+        padding: 0 12px; margin: 15px 0 8px;
+        text-transform: uppercase; letter-spacing: 1px;
+    }
+    .menu-item {
+        display: flex; align-items: center; gap: 13px;
+        padding: 13px 14px; margin: 5px 0;
+        border-radius: 10px; color: #cbd5e1;
+        text-decoration: none; cursor: pointer; transition: 0.2s;
+    }
+    .menu-item:hover { background: rgba(255,255,255,0.08); color: white; }
     .menu-item.active {
         background: linear-gradient(90deg, #2563eb, #4f46e5);
-        color: white;
-        box-shadow: 0 5px 15px rgba(37,99,235,0.25);
+        color: white; box-shadow: 0 5px 15px rgba(37,99,235,0.25);
     }
-
-    .menu-icon {
-        width: 22px;
-        text-align: center;
-        font-size: 18px;
-    }
+    .menu-icon { width: 22px; text-align: center; font-size: 18px; }
 
     /* ================= MAIN ================= */
-
-    .main {
-        margin-left: 250px;
-        min-height: 100vh;
-        transition: 0.3s;
-    }
+    .main { margin-left: 250px; min-height: 100vh; transition: 0.3s; }
 
     /* ================= TOPBAR ================= */
-
     .topbar {
-        height: 75px;
-        background: white;
+        height: 75px; background: white;
         border-bottom: 1px solid #e5e7eb;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 30px;
-        position: sticky;
-        top: 0;
-        z-index: 900;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0 30px; position: sticky; top: 0; z-index: 900;
     }
-
-    .top-left {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-
+    .top-left { display: flex; align-items: center; gap: 15px; }
     .mobile-menu {
-        display: none;
-        border: none;
-        background: #f1f5f9;
-        width: 40px;
-        height: 40px;
-        border-radius: 9px;
-        font-size: 20px;
-        cursor: pointer;
+        display: none; border: none; background: #f1f5f9;
+        width: 40px; height: 40px; border-radius: 9px;
+        font-size: 20px; cursor: pointer;
     }
+    .page-title h1 { font-size: 22px; color: #111827; }
+    .page-title p { font-size: 12px; color: #64748b; margin-top: 3px; }
 
-    .page-title h1 {
-        font-size: 22px;
-        color: #111827;
-    }
+    .top-right { display: flex; align-items: center; gap: 18px; }
 
-    .page-title p {
-        font-size: 12px;
-        color: #64748b;
-        margin-top: 3px;
-    }
-
-    .top-right {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-    }
-
-    .search {
-        position: relative;
-    }
-
+    .search { position: relative; }
     .search input {
-        width: 230px;
-        padding: 11px 15px 11px 38px;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        outline: none;
-        background: #f8fafc;
+        width: 230px; padding: 11px 15px 11px 38px;
+        border: 1px solid #e2e8f0; border-radius: 10px;
+        outline: none; background: #f8fafc;
     }
-
-    .search span {
-        position: absolute;
-        left: 13px;
-        top: 10px;
-        color: #64748b;
-    }
+    .search span { position: absolute; left: 13px; top: 10px; color: #64748b; }
 
     .notification {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        background: #f8fafc;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-        position: relative;
-        font-size: 18px;
+        width: 40px; height: 40px; border-radius: 10px;
+        background: #f8fafc; display: flex;
+        justify-content: center; align-items: center;
+        cursor: pointer; position: relative; font-size: 18px;
+    }
+    .notification .dot {
+        position: absolute; top: 8px; right: 8px;
+        width: 7px; height: 7px; border-radius: 50%; background: #ef4444;
     }
 
-    .notification .dot {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: #ef4444;
-    }
+    /* ================= PROFILE + DROPDOWN ================= */
+    .profile-wrapper { position: relative; }
 
     .profile {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
+        display: flex; align-items: center; gap: 10px;
+        cursor: pointer; padding: 5px 8px 5px 5px;
+        border-radius: 12px; transition: 0.15s;
     }
+    .profile:hover { background: #f8fafc; }
 
     .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
+        width: 40px; height: 40px; border-radius: 50%;
         background: linear-gradient(135deg, #2563eb, #7c3aed);
-        color: white;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-weight: bold;
+        color: white; display: flex; justify-content: center;
+        align-items: center; font-weight: bold; font-size: 13px;
     }
+    .profile-info strong { font-size: 13px; display: block; }
+    .profile-info span { font-size: 11px; color: #64748b; }
+    .caret { font-size: 10px; color: #64748b; transition: 0.2s; }
+    .profile.open .caret { transform: rotate(180deg); }
 
-    .profile-info strong {
-        font-size: 13px;
-        display: block;
+    .profile-dropdown {
+        position: absolute;
+        top: calc(100% + 12px);
+        right: 0;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        min-width: 230px;
+        box-shadow: 0 15px 40px rgba(15, 23, 42, 0.15);
+        padding: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-8px);
+        transition: 0.2s;
+        z-index: 1000;
     }
-
-    .profile-info span {
-        font-size: 11px;
-        color: #64748b;
+    .profile-dropdown.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
     }
+    .profile-dropdown-header {
+        padding: 12px 14px;
+        border-bottom: 1px solid #f1f5f9;
+        margin-bottom: 6px;
+    }
+    .profile-dropdown-header strong {
+        display: block; font-size: 13px; color: #1e293b;
+    }
+    .profile-dropdown-header span {
+        font-size: 11px; color: #64748b;
+    }
+    .dropdown-item {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 14px; border-radius: 8px;
+        font-size: 13px; color: #334155;
+        cursor: pointer; transition: 0.15s;
+        border: none; background: none;
+        width: 100%; text-align: left;
+        font-family: inherit;
+    }
+    .dropdown-item:hover { background: #f1f5f9; }
+    .dropdown-item.danger { color: #dc2626; }
+    .dropdown-item.danger:hover { background: #fee2e2; }
+    .dropdown-item .icon { font-size: 16px; }
 
     /* ================= CONTENT ================= */
-
-    .content {
-        padding: 30px;
-    }
-
-    .section {
-        display: none;
-        animation: fadeIn 0.25s ease;
-    }
-
-    .section.active {
-        display: block;
-    }
-
+    .content { padding: 30px; }
+    .section { display: none; animation: fadeIn 0.25s ease; }
+    .section.active { display: block; }
     @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(5px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     .welcome {
         background: linear-gradient(135deg, #2563eb, #4f46e5);
-        color: white;
-        border-radius: 18px;
-        padding: 25px 28px;
-        margin-bottom: 25px;
-        position: relative;
-        overflow: hidden;
+        color: white; border-radius: 18px;
+        padding: 25px 28px; margin-bottom: 25px;
+        position: relative; overflow: hidden;
     }
-
-    .welcome h2 {
-        font-size: 24px;
-        margin-bottom: 7px;
-    }
-
-    .welcome p {
-        opacity: 0.85;
-        font-size: 14px;
-    }
-
+    .welcome h2 { font-size: 24px; margin-bottom: 7px; }
+    .welcome p { opacity: 0.85; font-size: 14px; }
     .welcome .big-icon {
-        position: absolute;
-        right: 35px;
-        top: 10px;
-        font-size: 100px;
-        opacity: 0.12;
+        position: absolute; right: 35px; top: 10px;
+        font-size: 100px; opacity: 0.12;
     }
 
     /* ================= CARDS ================= */
-
     .cards {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 18px;
-        margin-bottom: 25px;
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        gap: 18px; margin-bottom: 25px;
     }
-
     .card {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        border: 1px solid #e5e7eb;
+        background: white; border-radius: 15px;
+        padding: 20px; border: 1px solid #e5e7eb;
         box-shadow: 0 3px 12px rgba(15,23,42,0.04);
     }
-
-    .stat-card {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
+    .stat-card { display: flex; justify-content: space-between; align-items: center; }
     .stat-icon {
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        width: 52px; height: 52px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
         font-size: 24px;
     }
-
-    .blue {
-        background: #dbeafe;
-        color: #2563eb;
-    }
-
-    .green {
-        background: #dcfce7;
-        color: #16a34a;
-    }
-
-    .orange {
-        background: #ffedd5;
-        color: #ea580c;
-    }
-
-    .purple {
-        background: #ede9fe;
-        color: #7c3aed;
-    }
-
-    .stat-info p {
-        color: #64748b;
-        font-size: 12px;
-        margin-bottom: 6px;
-    }
-
-    .stat-info h2 {
-        font-size: 25px;
-    }
+    .blue { background: #dbeafe; color: #2563eb; }
+    .green { background: #dcfce7; color: #16a34a; }
+    .orange { background: #ffedd5; color: #ea580c; }
+    .purple { background: #ede9fe; color: #7c3aed; }
+    .stat-info p { color: #64748b; font-size: 12px; margin-bottom: 6px; }
+    .stat-info h2 { font-size: 25px; }
 
     /* ================= DASHBOARD GRID ================= */
-
     .dashboard-grid {
-        display: grid;
-        grid-template-columns: 1.4fr 1fr;
-        gap: 20px;
+        display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px;
     }
-
     .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 18px;
+        display: flex; justify-content: space-between;
+        align-items: center; margin-bottom: 18px;
     }
-
-    .card-header h3 {
-        font-size: 16px;
-    }
-
+    .card-header h3 { font-size: 16px; }
     .card-header button {
-        border: none;
-        background: transparent;
-        color: #2563eb;
-        cursor: pointer;
-        font-size: 12px;
+        border: none; background: transparent;
+        color: #2563eb; cursor: pointer; font-size: 12px;
     }
 
     /* ================= TABLE ================= */
-
-    .table-wrapper {
-        overflow-x: auto;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
     th {
-        text-align: left;
-        background: #f8fafc;
-        color: #64748b;
-        font-size: 11px;
-        padding: 12px;
-        text-transform: uppercase;
+        text-align: left; background: #f8fafc;
+        color: #64748b; font-size: 11px;
+        padding: 12px; text-transform: uppercase;
     }
-
     td {
         padding: 13px 12px;
         border-bottom: 1px solid #f1f5f9;
         font-size: 13px;
     }
-
-    .staff-name {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
+    .staff-name { display: flex; align-items: center; gap: 10px; }
     .small-avatar {
-        width: 34px;
-        height: 34px;
-        border-radius: 50%;
-        background: #e0e7ff;
-        color: #4338ca;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 12px;
-        font-weight: bold;
-        flex-shrink: 0;
+        width: 34px; height: 34px; border-radius: 50%;
+        background: #e0e7ff; color: #4338ca;
+        display: flex; justify-content: center; align-items: center;
+        font-size: 12px; font-weight: bold; flex-shrink: 0;
     }
-
-    .badge {
-        padding: 5px 9px;
-        border-radius: 20px;
-        font-size: 10px;
-        font-weight: 600;
-    }
-
-    .present {
-        background: #dcfce7;
-        color: #15803d;
-    }
-
-    .absent {
-        background: #fee2e2;
-        color: #dc2626;
-    }
-
-    .leave {
-        background: #fef3c7;
-        color: #b45309;
-    }
-
-    .weekoff {
-        background: #e0e7ff;
-        color: #4338ca;
-    }
+    .badge { padding: 5px 9px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+    .present { background: #dcfce7; color: #15803d; }
+    .absent { background: #fee2e2; color: #dc2626; }
+    .leave { background: #fef3c7; color: #b45309; }
+    .weekoff { background: #e0e7ff; color: #4338ca; }
 
     /* ================= QUICK ACTIONS ================= */
-
-    .quick-actions {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-
+    .quick-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .quick-btn {
-        padding: 18px 10px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        cursor: pointer;
-        text-align: center;
-        transition: 0.2s;
+        padding: 18px 10px; background: #f8fafc;
+        border: 1px solid #e2e8f0; border-radius: 12px;
+        cursor: pointer; text-align: center; transition: 0.2s;
     }
-
     .quick-btn:hover {
-        background: #eff6ff;
-        border-color: #bfdbfe;
+        background: #eff6ff; border-color: #bfdbfe;
         transform: translateY(-2px);
     }
-
-    .quick-btn div {
-        font-size: 24px;
-        margin-bottom: 7px;
-    }
-
-    .quick-btn span {
-        font-size: 12px;
-        color: #475569;
-    }
+    .quick-btn div { font-size: 24px; margin-bottom: 7px; }
+    .quick-btn span { font-size: 12px; color: #475569; }
 
     /* ================= PAGE HEAD ================= */
-
     .page-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 22px;
+        display: flex; justify-content: space-between;
+        align-items: center; margin-bottom: 22px;
     }
-
-    .page-head h2 {
-        font-size: 22px;
-    }
-
-    .page-head p {
-        color: #64748b;
-        font-size: 13px;
-        margin-top: 4px;
-    }
-
+    .page-head h2 { font-size: 22px; }
+    .page-head p { color: #64748b; font-size: 13px; margin-top: 4px; }
     .primary-btn {
-        background: #2563eb;
-        color: white;
-        border: none;
-        border-radius: 9px;
-        padding: 11px 17px;
-        cursor: pointer;
-        font-size: 13px;
+        background: #2563eb; color: white; border: none;
+        border-radius: 9px; padding: 11px 17px;
+        cursor: pointer; font-size: 13px;
     }
-
-    .primary-btn:hover {
-        background: #1d4ed8;
-    }
-
-    .primary-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
+    .primary-btn:hover { background: #1d4ed8; }
+    .primary-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
     /* ================= COMPANY INFO ================= */
-
-    .company-grid {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 20px;
-    }
-
-    .company-logo-box {
-        text-align: center;
-        padding: 35px 20px;
-    }
-
+    .company-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+    .company-logo-box { text-align: center; padding: 35px 20px; }
     .company-logo {
-        width: 100px;
-        height: 100px;
-        margin: auto;
+        width: 100px; height: 100px; margin: auto;
         border-radius: 25px;
         background: linear-gradient(135deg, #2563eb, #7c3aed);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 45px;
-        font-weight: bold;
+        display: flex; align-items: center; justify-content: center;
+        color: white; font-size: 45px; font-weight: bold;
     }
+    .company-logo-box h2 { margin-top: 15px; }
+    .company-logo-box p { color: #64748b; font-size: 13px; margin-top: 5px; }
 
-    .company-logo-box h2 {
-        margin-top: 15px;
-    }
-
-    .company-logo-box p {
-        color: #64748b;
-        font-size: 13px;
-        margin-top: 5px;
-    }
-
-    .info-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }
-
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     .info-field label {
-        display: block;
-        color: #64748b;
-        font-size: 11px;
-        margin-bottom: 6px;
+        display: block; color: #64748b;
+        font-size: 11px; margin-bottom: 6px;
     }
-
     .info-field input,
     .info-field textarea,
     .settings-input {
-        width: 100%;
-        padding: 11px 12px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        outline: none;
-        font-size: 13px;
-        background: #f8fafc;
+        width: 100%; padding: 11px 12px;
+        border: 1px solid #e2e8f0; border-radius: 8px;
+        outline: none; font-size: 13px; background: #f8fafc;
     }
-
-    .info-field textarea {
-        height: 80px;
-        resize: vertical;
-    }
-
-    .full {
-        grid-column: 1 / -1;
-    }
+    .info-field textarea { height: 80px; resize: vertical; }
+    .full { grid-column: 1 / -1; }
 
     /* ================= ATTENDANCE ================= */
-
     .attendance-summary {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 18px;
-        margin-bottom: 20px;
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: 18px; margin-bottom: 20px;
     }
-
     .attendance-box {
-        padding: 20px;
-        border-radius: 14px;
-        background: white;
-        border: 1px solid #e5e7eb;
+        padding: 20px; border-radius: 14px;
+        background: white; border: 1px solid #e5e7eb;
     }
-
-    .attendance-box h2 {
-        margin-top: 8px;
-        font-size: 28px;
-    }
-
-    .attendance-box p {
-        color: #64748b;
-        font-size: 12px;
-    }
+    .attendance-box h2 { margin-top: 8px; font-size: 28px; }
+    .attendance-box p { color: #64748b; font-size: 12px; }
 
     /* ================= VIEW TOGGLE ================= */
-
     .view-toggle {
-        display: inline-flex;
-        background: #f1f5f9;
-        border-radius: 10px;
-        padding: 4px;
-        margin-bottom: 20px;
-        gap: 4px;
+        display: inline-flex; background: #f1f5f9;
+        border-radius: 10px; padding: 4px;
+        margin-bottom: 20px; gap: 4px;
     }
-
     .view-tab {
-        border: none;
-        background: transparent;
-        padding: 8px 18px;
-        border-radius: 7px;
-        cursor: pointer;
-        font-size: 13px;
-        color: #475569;
-        font-weight: 500;
-        transition: 0.15s;
+        border: none; background: transparent;
+        padding: 8px 18px; border-radius: 7px;
+        cursor: pointer; font-size: 13px;
+        color: #475569; font-weight: 500; transition: 0.15s;
     }
-
-    .view-tab:hover {
-        color: #1e293b;
-    }
-
+    .view-tab:hover { color: #1e293b; }
     .view-tab.active {
-        background: white;
-        color: #2563eb;
+        background: white; color: #2563eb;
         box-shadow: 0 2px 6px rgba(15,23,42,0.08);
     }
 
     /* ================= SETTINGS ================= */
-
-    .settings-list {
-        max-width: 850px;
-    }
-
+    .settings-list { max-width: 850px; }
     .setting-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 18px 0;
+        display: flex; justify-content: space-between;
+        align-items: center; padding: 18px 0;
         border-bottom: 1px solid #e5e7eb;
     }
-
-    .setting-item h4 {
-        font-size: 14px;
-        margin-bottom: 4px;
-    }
-
-    .setting-item p {
-        color: #64748b;
-        font-size: 12px;
-    }
-
+    .setting-item h4 { font-size: 14px; margin-bottom: 4px; }
+    .setting-item p { color: #64748b; font-size: 12px; }
     .toggle {
-        width: 46px;
-        height: 24px;
-        background: #cbd5e1;
-        border-radius: 20px;
-        position: relative;
-        cursor: pointer;
+        width: 46px; height: 24px; background: #cbd5e1;
+        border-radius: 20px; position: relative; cursor: pointer;
     }
-
     .toggle::after {
-        content: "";
-        width: 18px;
-        height: 18px;
-        background: white;
-        border-radius: 50%;
-        position: absolute;
-        top: 3px;
-        left: 3px;
-        transition: 0.2s;
+        content: ""; width: 18px; height: 18px;
+        background: white; border-radius: 50%;
+        position: absolute; top: 3px; left: 3px; transition: 0.2s;
     }
-
-    .toggle.active {
-        background: #2563eb;
-    }
-
-    .toggle.active::after {
-        left: 25px;
-    }
+    .toggle.active { background: #2563eb; }
+    .toggle.active::after { left: 25px; }
 
     /* ================= STATUS MESSAGES ================= */
-
     .db-status {
-        padding: 10px 16px;
-        border-radius: 8px;
-        font-size: 13px;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        padding: 10px 16px; border-radius: 8px;
+        font-size: 13px; margin-bottom: 15px;
+        display: flex; align-items: center; gap: 8px;
     }
-
-    .db-status.success {
-        background: #dcfce7;
-        color: #166534;
-    }
-
-    .db-status.error {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    .db-status.info {
-        background: #dbeafe;
-        color: #1e40af;
-    }
+    .db-status.success { background: #dcfce7; color: #166534; }
+    .db-status.error { background: #fee2e2; color: #991b1b; }
+    .db-status.info { background: #dbeafe; color: #1e40af; }
 
     /* ================= MODAL ================= */
     .modal-backdrop {
-        display: none;
-        position: fixed;
-        inset: 0;
+        display: none; position: fixed; inset: 0;
         background: rgba(15, 23, 42, 0.55);
-        z-index: 2000;
-        justify-content: center;
-        align-items: center;
-        padding: 20px;
+        z-index: 2000; justify-content: center;
+        align-items: center; padding: 20px;
     }
-
-    .modal-backdrop.show {
-        display: flex;
-    }
-
+    .modal-backdrop.show { display: flex; }
     .modal {
-        background: white;
-        border-radius: 16px;
-        width: 100%;
-        max-width: 520px;
+        background: white; border-radius: 16px;
+        width: 100%; max-width: 520px;
         padding: 26px 28px;
         box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
         animation: fadeIn 0.2s ease;
-        max-height: 90vh;
-        overflow-y: auto;
+        max-height: 90vh; overflow-y: auto;
     }
-
-    .modal h3 {
-        font-size: 18px;
-        margin-bottom: 6px;
-    }
-
-    .modal .modal-sub {
-        font-size: 12px;
-        color: #64748b;
-        margin-bottom: 20px;
-    }
-
+    .modal h3 { font-size: 18px; margin-bottom: 6px; }
+    .modal .modal-sub { font-size: 12px; color: #64748b; margin-bottom: 20px; }
     .modal .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 14px;
-        margin-bottom: 14px;
+        display: grid; grid-template-columns: 1fr 1fr;
+        gap: 14px; margin-bottom: 14px;
     }
-
-    .modal .form-row.full {
-        grid-template-columns: 1fr;
-    }
-
+    .modal .form-row.full { grid-template-columns: 1fr; }
     .modal label {
-        display: block;
-        font-size: 11px;
-        color: #64748b;
-        margin-bottom: 5px;
-        text-transform: uppercase;
+        display: block; font-size: 11px; color: #64748b;
+        margin-bottom: 5px; text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-
-    .modal input,
-    .modal select {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 13px;
-        background: #f8fafc;
-        outline: none;
+    .modal input, .modal select {
+        width: 100%; padding: 10px 12px;
+        border: 1px solid #e2e8f0; border-radius: 8px;
+        font-size: 13px; background: #f8fafc; outline: none;
     }
-
-    .modal input:focus,
-    .modal select:focus {
-        border-color: #2563eb;
-        background: white;
+    .modal input:focus, .modal select:focus {
+        border-color: #2563eb; background: white;
     }
-
     .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        margin-top: 22px;
+        display: flex; justify-content: flex-end;
+        gap: 10px; margin-top: 22px;
     }
-
     .btn-secondary {
-        background: #f1f5f9;
-        color: #334155;
-        border: none;
-        border-radius: 9px;
-        padding: 11px 17px;
-        cursor: pointer;
-        font-size: 13px;
+        background: #f1f5f9; color: #334155;
+        border: none; border-radius: 9px;
+        padding: 11px 17px; cursor: pointer; font-size: 13px;
+        font-family: inherit;
     }
-
-    .btn-secondary:hover {
-        background: #e2e8f0;
-    }
-
+    .btn-secondary:hover { background: #e2e8f0; }
     .btn-danger {
-        background: #dc2626;
-        color: white;
-        border: none;
-        border-radius: 9px;
-        padding: 11px 17px;
-        cursor: pointer;
-        font-size: 13px;
+        background: #dc2626; color: white;
+        border: none; border-radius: 9px;
+        padding: 11px 17px; cursor: pointer; font-size: 13px;
+        font-family: inherit;
     }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-danger:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    .btn-danger:hover {
-        background: #b91c1c;
-    }
-
-    /* Action buttons inside table */
     .action-btn {
-        border: none;
-        background: #f1f5f9;
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 14px;
-        margin-right: 5px;
-        transition: 0.15s;
+        border: none; background: #f1f5f9;
+        width: 32px; height: 32px; border-radius: 8px;
+        cursor: pointer; font-size: 14px;
+        margin-right: 5px; transition: 0.15s;
     }
-
-    .action-btn:hover {
-        background: #e2e8f0;
-        transform: translateY(-1px);
-    }
-
-    .action-btn.edit:hover {
-        background: #dbeafe;
-    }
-
-    .action-btn.delete:hover {
-        background: #fee2e2;
-    }
+    .action-btn:hover { background: #e2e8f0; transform: translateY(-1px); }
+    .action-btn.edit:hover { background: #dbeafe; }
+    .action-btn.delete:hover { background: #fee2e2; }
 
     /* ================= MOBILE ================= */
-
     .overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.4);
-        z-index: 999;
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.4); z-index: 999;
     }
 
     @media(max-width: 1100px) {
-        .cards {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .dashboard-grid {
-            grid-template-columns: 1fr;
-        }
+        .cards { grid-template-columns: repeat(2, 1fr); }
+        .dashboard-grid { grid-template-columns: 1fr; }
     }
-
     @media(max-width: 800px) {
-
-        .sidebar {
-            left: -260px;
-        }
-
-        .sidebar.open {
-            left: 0;
-        }
-
-        .main {
-            margin-left: 0;
-        }
-
-        .mobile-menu {
-            display: block;
-        }
-
-        .overlay.show {
-            display: block;
-        }
-
-        .topbar {
-            padding: 0 15px;
-        }
-
-        .search {
-            display: none;
-        }
-
-        .profile-info {
-            display: none;
-        }
-
-        .content {
-            padding: 18px;
-        }
-
-        .company-grid {
-            grid-template-columns: 1fr;
-        }
+        .sidebar { left: -260px; }
+        .sidebar.open { left: 0; }
+        .main { margin-left: 0; }
+        .mobile-menu { display: block; }
+        .overlay.show { display: block; }
+        .topbar { padding: 0 15px; }
+        .search { display: none; }
+        .profile-info { display: none; }
+        .caret { display: none; }
+        .content { padding: 18px; }
+        .company-grid { grid-template-columns: 1fr; }
     }
-
     @media(max-width: 600px) {
-
-        .cards {
-            grid-template-columns: 1fr;
-        }
-
-        .attendance-summary {
-            grid-template-columns: 1fr;
-        }
-
-        .info-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .welcome {
-            padding: 20px;
-        }
-
-        .welcome h2 {
-            font-size: 20px;
-        }
-
-        .page-head {
-            align-items: flex-start;
-            gap: 12px;
-        }
-
-        .page-head h2 {
-            font-size: 19px;
-        }
-
-        .primary-btn {
-            white-space: nowrap;
-        }
-
-        .quick-actions {
-            grid-template-columns: 1fr 1fr;
-        }
+        .cards { grid-template-columns: 1fr; }
+        .attendance-summary { grid-template-columns: 1fr; }
+        .info-grid { grid-template-columns: 1fr; }
+        .welcome { padding: 20px; }
+        .welcome h2 { font-size: 20px; }
+        .page-head { align-items: flex-start; gap: 12px; }
+        .page-head h2 { font-size: 19px; }
+        .primary-btn { white-space: nowrap; }
+        .quick-actions { grid-template-columns: 1fr 1fr; }
     }
 </style>
 </head>
 
 <body>
 
+<!-- ================= ADMIN LOGIN SCREEN ================= -->
+<div id="loginScreen">
+    <div class="login-card">
+        <div class="login-logo">👥</div>
+        <h2>KCST Staff Pro</h2>
+        <p class="subtitle">Administrator Login</p>
+
+        <div id="loginError"></div>
+
+        <div class="login-field">
+            <label>Email</label>
+            <input id="loginEmail" type="email" placeholder="info@kcst.com" autocomplete="username">
+        </div>
+
+        <div class="login-field">
+            <label>Password</label>
+            <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <button class="login-btn" id="loginBtn" onclick="doAdminLogin()">🔓 Login</button>
+
+        <p class="login-hint">Secure login powered by Supabase Auth</p>
+    </div>
+</div>
+
 <!-- ================= SIDEBAR ================= -->
-
 <div class="sidebar" id="sidebar">
-
     <div class="logo">
         <div class="logo-icon">👥</div>
         <div>
@@ -991,95 +557,77 @@
     </div>
 
     <div class="menu-title">Main Menu</div>
-
-    <a class="menu-item active" data-section="dashboard">
-        <span class="menu-icon">🏠</span>
-        Dashboard
-    </a>
-
-    <a class="menu-item" data-section="company">
-        <span class="menu-icon">🏢</span>
-        Company Info
-    </a>
-
-    <a class="menu-item" data-section="staff">
-        <span class="menu-icon">👥</span>
-        Staff Details
-    </a>
-
-    <a class="menu-item" data-section="attendance">
-        <span class="menu-icon">🕒</span>
-        Attendance
-    </a>
+    <a class="menu-item active" data-section="dashboard"><span class="menu-icon">🏠</span>Dashboard</a>
+    <a class="menu-item" data-section="company"><span class="menu-icon">🏢</span>Company Info</a>
+    <a class="menu-item" data-section="staff"><span class="menu-icon">👥</span>Staff Details</a>
+    <a class="menu-item" data-section="attendance"><span class="menu-icon">🕒</span>Attendance</a>
 
     <div class="menu-title">System</div>
-
-    <a class="menu-item" data-section="settings">
-        <span class="menu-icon">⚙️</span>
-        Settings
-    </a>
-
+    <a class="menu-item" data-section="settings"><span class="menu-icon">⚙️</span>Settings</a>
 </div>
 
 <div class="overlay" id="overlay"></div>
 
 <!-- ================= MAIN ================= -->
-
-<div class="main">
-
-    <!-- TOP BAR -->
+<div class="main" id="mainApp">
 
     <div class="topbar">
-
         <div class="top-left">
-
-            <button class="mobile-menu" id="mobileMenu">
-                ☰
-            </button>
-
+            <button class="mobile-menu" id="mobileMenu">☰</button>
             <div class="page-title">
                 <h1 id="topTitle">Dashboard</h1>
                 <p id="topSubtitle">Staff Management System</p>
             </div>
-
         </div>
 
         <div class="top-right">
-
             <div class="search">
                 <span>🔍</span>
                 <input type="text" placeholder="Search...">
             </div>
 
-            <div class="notification">
-                🔔
-                <div class="dot"></div>
-            </div>
+            <div class="notification">🔔<div class="dot"></div></div>
 
-            <div class="profile">
-                <div class="avatar">SSA</div>
+            <div class="profile-wrapper">
+                <div class="profile" id="profileTrigger" onclick="toggleProfileDropdown(event)">
+                    <div class="avatar" id="adminAvatar">A</div>
+                    <div class="profile-info">
+                        <strong id="adminNameLabel">ADMIN</strong>
+                        <span>Administrator</span>
+                    </div>
+                    <span class="caret">▼</span>
+                </div>
 
-                <div class="profile-info">
-                    <strong>SAYYID SHEREEF KC</strong>
-                    <span>Administrator</span>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="profile-dropdown-header">
+                        <strong id="dropdownAdminName">ADMIN</strong>
+                        <span id="dropdownAdminEmail">—</span>
+                    </div>
+
+                    <button class="dropdown-item" onclick="dropdownGoto('settings')">
+                        <span class="icon">⚙️</span>
+                        Settings
+                    </button>
+
+                    <button class="dropdown-item" onclick="dropdownGoto('company')">
+                        <span class="icon">🏢</span>
+                        Company Info
+                    </button>
+
+                    <button class="dropdown-item danger" onclick="dropdownLogout()">
+                        <span class="icon">🚪</span>
+                        Log Out
+                    </button>
                 </div>
             </div>
-
         </div>
-
     </div>
 
-    <!-- CONTENT -->
-
     <div class="content">
-
-        <!-- DB STATUS BANNER (global) -->
         <div id="globalStatus" class="db-status info" style="display:none;"></div>
 
         <!-- ================= DASHBOARD ================= -->
-
         <section class="section active" id="dashboard">
-
             <div class="welcome">
                 <h2>Welcome back, Admin! 👋</h2>
                 <p>Here's what's happening with your company today.</p>
@@ -1087,254 +635,136 @@
             </div>
 
             <div class="cards">
-
                 <div class="card stat-card">
-                    <div class="stat-info">
-                        <p>Total Staff</p>
-                        <h2 id="dashTotalStaff">–</h2>
-                    </div>
+                    <div class="stat-info"><p>Total Staff</p><h2 id="dashTotalStaff">–</h2></div>
                     <div class="stat-icon blue">👥</div>
                 </div>
-
                 <div class="card stat-card">
-                    <div class="stat-info">
-                        <p>Present Today</p>
-                        <h2 id="dashPresentToday">–</h2>
-                    </div>
+                    <div class="stat-info"><p>Present Today</p><h2 id="dashPresentToday">–</h2></div>
                     <div class="stat-icon green">✓</div>
                 </div>
-
                 <div class="card stat-card">
-                    <div class="stat-info">
-                        <p>On Leave</p>
-                        <h2 id="dashOnLeave">–</h2>
-                    </div>
+                    <div class="stat-info"><p>On Leave</p><h2 id="dashOnLeave">–</h2></div>
                     <div class="stat-icon orange">📅</div>
                 </div>
-
                 <div class="card stat-card">
-                    <div class="stat-info">
-                        <p>Absent</p>
-                        <h2 id="dashAbsent">–</h2>
-                    </div>
+                    <div class="stat-info"><p>Absent</p><h2 id="dashAbsent">–</h2></div>
                     <div class="stat-icon purple">⚠</div>
                 </div>
-
             </div>
 
             <div class="dashboard-grid">
-
                 <div class="card">
-
                     <div class="card-header">
                         <h3>Today's Attendance</h3>
-                        <button onclick="showSection('attendance')">
-                            View All →
-                        </button>
+                        <button onclick="showSection('attendance')">View All →</button>
                     </div>
-
                     <div class="table-wrapper">
-
                         <table>
                             <thead>
-                                <tr>
-                                    <th>Staff</th>
-                                    <th>Time</th>
-                                    <th>Status</th>
-                                </tr>
+                                <tr><th>Staff</th><th>Time</th><th>Status</th></tr>
                             </thead>
                             <tbody id="dashboardAttendanceBody">
                                 <tr><td colspan="3" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
                             </tbody>
                         </table>
-
                     </div>
-
                 </div>
 
                 <div class="card">
-
-                    <div class="card-header">
-                        <h3>Quick Actions</h3>
-                    </div>
-
+                    <div class="card-header"><h3>Quick Actions</h3></div>
                     <div class="quick-actions">
-
-                        <div class="quick-btn" onclick="showSection('staff')">
-                            <div>➕</div>
-                            <span>Add Staff</span>
-                        </div>
-
-                        <div class="quick-btn" onclick="showSection('attendance')">
-                            <div>🕒</div>
-                            <span>Attendance</span>
-                        </div>
-
-                        <div class="quick-btn" onclick="showSection('company')">
-                            <div>🏢</div>
-                            <span>Company</span>
-                        </div>
-
-                        <div class="quick-btn" onclick="showSection('settings')">
-                            <div>⚙️</div>
-                            <span>Settings</span>
-                        </div>
-
+                        <div class="quick-btn" onclick="showSection('staff')"><div>➕</div><span>Add Staff</span></div>
+                        <div class="quick-btn" onclick="showSection('attendance')"><div>🕒</div><span>Attendance</span></div>
+                        <div class="quick-btn" onclick="showSection('company')"><div>🏢</div><span>Company</span></div>
+                        <div class="quick-btn" onclick="showSection('settings')"><div>⚙️</div><span>Settings</span></div>
                     </div>
-
                 </div>
-
             </div>
-
         </section>
 
-
         <!-- ================= COMPANY ================= -->
-
         <section class="section" id="company">
-
             <div class="page-head">
-                <div>
-                    <h2>Company Information</h2>
-                    <p>Manage your company details</p>
-                </div>
-
-                <button class="primary-btn" onclick="saveCompany()">
-                    💾 Save Changes
-                </button>
+                <div><h2>Company Information</h2><p>Manage your company details</p></div>
+                <button class="primary-btn" onclick="saveCompany()">💾 Save Changes</button>
             </div>
 
             <div class="company-grid">
-
                 <div class="card company-logo-box">
-
-                    <div class="company-logo">
-                        S
-                    </div>
-
+                    <div class="company-logo">S</div>
                     <h2 id="companyLogoName">StaffPro</h2>
                     <p>Staff Management System</p>
-
                     <br>
-
-                    <button class="primary-btn">
-                        Change Logo
-                    </button>
-
+                    <button class="primary-btn">Change Logo</button>
                 </div>
 
                 <div class="card">
-
                     <div class="info-grid">
-
                         <div class="info-field">
                             <label>Company Name</label>
                             <input id="companyName" value="StaffPro Technologies">
                         </div>
-
                         <div class="info-field">
                             <label>Registration Number</label>
                             <input id="companyReg" value="REG-2026-001">
                         </div>
-
                         <div class="info-field">
                             <label>Phone Number</label>
                             <input id="companyPhone" value="+91 98765 43210">
                         </div>
-
                         <div class="info-field">
                             <label>Email Address</label>
                             <input id="companyEmail" value="info@company.com">
                         </div>
-
                         <div class="info-field">
                             <label>Website</label>
                             <input id="companyWebsite" value="www.company.com">
                         </div>
-
                         <div class="info-field">
                             <label>GSTIN</label>
                             <input id="companyGstin" value="32ABCDE1234F1Z5">
                         </div>
-
                         <div class="info-field full">
                             <label>Company Address</label>
                             <textarea id="companyAddress">Company Road,
 Kerala, India</textarea>
                         </div>
-
                     </div>
-
                 </div>
-
             </div>
-
         </section>
 
-
         <!-- ================= STAFF ================= -->
-
         <section class="section" id="staff">
-
             <div class="page-head">
-
-                <div>
-                    <h2>Staff Details</h2>
-                    <p>Manage employees and staff information</p>
-                </div>
-
-                <button class="primary-btn" onclick="addStaff()">
-                    ➕ Add Staff
-                </button>
-
+                <div><h2>Staff Details</h2><p>Manage employees and staff information</p></div>
+                <button class="primary-btn" onclick="addStaff()">➕ Add Staff</button>
             </div>
 
             <div class="card">
-
                 <div class="table-wrapper">
-
                     <table>
-
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Staff Name</th>
-                                <th>Role</th>
-                                <th>Department</th>
-                                <th>Joined Date</th>
-                                <th>Daily Rate</th>
-                                <th style="text-align:right;">Actions</th>
+                                <th>ID</th><th>Staff Name</th><th>Role</th>
+                                <th>Department</th><th>Joined Date</th>
+                                <th>Daily Rate</th><th style="text-align:right;">Actions</th>
                             </tr>
                         </thead>
-
                         <tbody id="staffTableBody">
                             <tr><td colspan="7" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
                         </tbody>
-
                     </table>
-
                 </div>
-
             </div>
-
         </section>
 
-
         <!-- ================= ATTENDANCE ================= -->
-
         <section class="section" id="attendance">
-
             <div class="page-head">
-
-                <div>
-                    <h2>Attendance</h2>
-                    <p>Track daily and monthly staff attendance</p>
-                </div>
-
-                <button class="primary-btn" onclick="markAttendance()">
-                    🕒 Mark Attendance
-                </button>
-
+                <div><h2>Attendance</h2><p>Track daily and monthly staff attendance</p></div>
+                <button class="primary-btn" onclick="markAttendance()">🕒 Mark Attendance</button>
             </div>
 
             <div class="view-toggle">
@@ -1342,94 +772,49 @@ Kerala, India</textarea>
                 <button class="view-tab" id="tabMonth" onclick="switchAttendanceView('month')">📆 Month</button>
             </div>
 
-            <!-- ============ DAY VIEW ============ -->
+            <!-- DAY VIEW -->
             <div id="attendanceDayView">
-
                 <div class="attendance-summary">
-
-                    <div class="attendance-box">
-                        <p>Present Today</p>
-                        <h2 id="attPresentToday">–</h2>
-                    </div>
-
-                    <div class="attendance-box">
-                        <p>Absent Today</p>
-                        <h2 id="attAbsentToday">–</h2>
-                    </div>
-
-                    <div class="attendance-box">
-                        <p>On Leave</p>
-                        <h2 id="attOnLeave">–</h2>
-                    </div>
-
+                    <div class="attendance-box"><p>Present Today</p><h2 id="attPresentToday">–</h2></div>
+                    <div class="attendance-box"><p>Absent Today</p><h2 id="attAbsentToday">–</h2></div>
+                    <div class="attendance-box"><p>On Leave</p><h2 id="attOnLeave">–</h2></div>
                 </div>
 
                 <div class="card">
-
                     <div class="card-header">
                         <h3>Daily Attendance</h3>
-
-                        <input type="date"
-                               id="attendanceDate"
-                               style="padding:8px;border:1px solid #ddd;border-radius:7px;">
+                        <input type="date" id="attendanceDate" style="padding:8px;border:1px solid #ddd;border-radius:7px;">
                     </div>
-
                     <div class="table-wrapper">
-
                         <table>
-
                             <thead>
                                 <tr>
-                                    <th>Staff ID</th>
-                                    <th>Staff Name</th>
-                                    <th>Check In</th>
-                                    <th>Check Out</th>
-                                    <th>Status</th>
-                                    <th style="text-align:right;">Actions</th>
+                                    <th>Staff ID</th><th>Staff Name</th>
+                                    <th>Check In</th><th>Check Out</th>
+                                    <th>Status</th><th style="text-align:right;">Actions</th>
                                 </tr>
                             </thead>
-
                             <tbody id="attendanceTableBody">
                                 <tr><td colspan="6" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
                             </tbody>
-
                         </table>
-
                     </div>
-
                 </div>
-
             </div>
 
-            <!-- ============ MONTH VIEW ============ -->
+            <!-- MONTH VIEW -->
             <div id="attendanceMonthView" style="display:none;">
-
                 <div class="card" style="margin-bottom:20px;">
                     <div class="card-header">
                         <h3>Month Overview</h3>
-                        <input type="month"
-                               id="attendanceMonth"
-                               style="padding:8px;border:1px solid #ddd;border-radius:7px;">
+                        <input type="month" id="attendanceMonth" style="padding:8px;border:1px solid #ddd;border-radius:7px;">
                     </div>
                 </div>
 
                 <div class="attendance-summary">
-
-                    <div class="attendance-box">
-                        <p>Total Present</p>
-                        <h2 id="monthTotalPresent">–</h2>
-                    </div>
-
-                    <div class="attendance-box">
-                        <p>Total Absent</p>
-                        <h2 id="monthTotalAbsent">–</h2>
-                    </div>
-
-                    <div class="attendance-box">
-                        <p>Total Leave</p>
-                        <h2 id="monthTotalLeave">–</h2>
-                    </div>
-
+                    <div class="attendance-box"><p>Total Present</p><h2 id="monthTotalPresent">–</h2></div>
+                    <div class="attendance-box"><p>Total Absent</p><h2 id="monthTotalAbsent">–</h2></div>
+                    <div class="attendance-box"><p>Total Leave</p><h2 id="monthTotalLeave">–</h2></div>
                 </div>
 
                 <div class="card" style="margin-bottom:20px;">
@@ -1441,13 +826,9 @@ Kerala, India</textarea>
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Staff ID</th>
-                                    <th>Staff Name</th>
-                                    <th>Present</th>
-                                    <th>Absent</th>
-                                    <th>Leave</th>
-                                    <th>Week Off</th>
-                                    <th>Total Records</th>
+                                    <th>Staff ID</th><th>Staff Name</th>
+                                    <th>Present</th><th>Absent</th><th>Leave</th>
+                                    <th>Week Off</th><th>Total Records</th>
                                     <th style="text-align:right;">Actions</th>
                                 </tr>
                             </thead>
@@ -1459,18 +840,13 @@ Kerala, India</textarea>
                 </div>
 
                 <div class="card">
-                    <div class="card-header">
-                        <h3>Daily Breakdown</h3>
-                    </div>
+                    <div class="card-header"><h3>Daily Breakdown</h3></div>
                     <div class="table-wrapper">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Present</th>
-                                    <th>Absent</th>
-                                    <th>Leave</th>
-                                    <th>Total</th>
+                                    <th>Date</th><th>Present</th><th>Absent</th>
+                                    <th>Leave</th><th>Total</th>
                                 </tr>
                             </thead>
                             <tbody id="monthDailyBody">
@@ -1479,69 +855,37 @@ Kerala, India</textarea>
                         </table>
                     </div>
                 </div>
-
             </div>
-
         </section>
 
-
         <!-- ================= SETTINGS ================= -->
-
         <section class="section" id="settings">
-
             <div class="page-head">
-
-                <div>
-                    <h2>Settings</h2>
-                    <p>Configure your staff management system</p>
-                </div>
-
-                <button class="primary-btn" onclick="saveSettings()">
-                    💾 Save Settings
-                </button>
-
+                <div><h2>Settings</h2><p>Configure your staff management system</p></div>
+                <button class="primary-btn" onclick="saveSettings()">💾 Save Settings</button>
             </div>
 
             <div class="card settings-list">
-
                 <div class="setting-item">
-                    <div>
-                        <h4>Automatic Attendance</h4>
-                        <p>Automatically record attendance based on check-in time.</p>
-                    </div>
+                    <div><h4>Automatic Attendance</h4><p>Automatically record attendance based on check-in time.</p></div>
                     <div class="toggle active" onclick="toggleSetting(this)"></div>
                 </div>
-
                 <div class="setting-item">
-                    <div>
-                        <h4>Attendance Notifications</h4>
-                        <p>Receive notifications for late or absent staff.</p>
-                    </div>
+                    <div><h4>Attendance Notifications</h4><p>Receive notifications for late or absent staff.</p></div>
                     <div class="toggle active" onclick="toggleSetting(this)"></div>
                 </div>
-
                 <div class="setting-item">
-                    <div>
-                        <h4>Dark Mode</h4>
-                        <p>Use dark theme for the dashboard.</p>
-                    </div>
+                    <div><h4>Dark Mode</h4><p>Use dark theme for the dashboard.</p></div>
                     <div class="toggle" onclick="toggleDarkMode(this)"></div>
                 </div>
-
                 <div class="setting-item">
-                    <div>
-                        <h4>System Backup</h4>
-                        <p>Keep regular backups of company and staff data.</p>
-                    </div>
+                    <div><h4>System Backup</h4><p>Keep regular backups of company and staff data.</p></div>
                     <button class="primary-btn" onclick="backupData()">Backup</button>
                 </div>
-
             </div>
-
         </section>
 
     </div>
-
 </div>
 
 <!-- ================= MARK ATTENDANCE MODAL ================= -->
@@ -1553,17 +897,12 @@ Kerala, India</textarea>
         <div class="form-row full">
             <div>
                 <label>Staff *</label>
-                <select id="markStaffSelect">
-                    <option value="">— Loading staff… —</option>
-                </select>
+                <select id="markStaffSelect"><option value="">— Loading staff… —</option></select>
             </div>
         </div>
 
         <div class="form-row">
-            <div>
-                <label>Date *</label>
-                <input id="markDate" type="date">
-            </div>
+            <div><label>Date *</label><input id="markDate" type="date"></div>
             <div>
                 <label>Status *</label>
                 <select id="markStatus">
@@ -1576,14 +915,8 @@ Kerala, India</textarea>
         </div>
 
         <div class="form-row">
-            <div>
-                <label>Check In</label>
-                <input id="markCheckIn" type="time">
-            </div>
-            <div>
-                <label>Check Out</label>
-                <input id="markCheckOut" type="time">
-            </div>
+            <div><label>Check In</label><input id="markCheckIn" type="time"></div>
+            <div><label>Check Out</label><input id="markCheckOut" type="time"></div>
         </div>
 
         <div class="modal-actions">
@@ -1605,34 +938,16 @@ Kerala, India</textarea>
                 <input id="addStaffCode" readonly style="background:#f1f5f9;color:#64748b;">
             </div>
         </div>
-
         <div class="form-row full">
-            <div>
-                <label>Full Name *</label>
-                <input id="addStaffName" placeholder="e.g. Arun Mathew">
-            </div>
+            <div><label>Full Name *</label><input id="addStaffName" placeholder="e.g. Arun Mathew"></div>
         </div>
-
         <div class="form-row">
-            <div>
-                <label>Role</label>
-                <input id="addStaffRole" placeholder="e.g. Senior Media Analyst">
-            </div>
-            <div>
-                <label>Department</label>
-                <input id="addStaffDept" placeholder="e.g. Operations">
-            </div>
+            <div><label>Role</label><input id="addStaffRole" placeholder="e.g. Senior Media Analyst"></div>
+            <div><label>Department</label><input id="addStaffDept" placeholder="e.g. Operations"></div>
         </div>
-
         <div class="form-row">
-            <div>
-                <label>Joined Date</label>
-                <input id="addStaffJoined" type="date">
-            </div>
-            <div>
-                <label>Daily Rate (₹)</label>
-                <input id="addStaffRate" type="number" step="0.01" placeholder="e.g. 500">
-            </div>
+            <div><label>Joined Date</label><input id="addStaffJoined" type="date"></div>
+            <div><label>Daily Rate (₹)</label><input id="addStaffRate" type="number" step="0.01" placeholder="e.g. 500"></div>
         </div>
 
         <div class="modal-actions">
@@ -1649,41 +964,19 @@ Kerala, India</textarea>
         <p class="modal-sub">Update the details and save your changes.</p>
 
         <input type="hidden" id="editStaffId">
-
         <div class="form-row full">
-            <div>
-                <label>Staff ID</label>
-                <input id="editStaffCode" readonly style="background:#f1f5f9;color:#64748b;">
-            </div>
+            <div><label>Staff ID</label><input id="editStaffCode" readonly style="background:#f1f5f9;color:#64748b;"></div>
         </div>
-
         <div class="form-row full">
-            <div>
-                <label>Full Name</label>
-                <input id="editStaffName" placeholder="e.g. Arun Mathew">
-            </div>
+            <div><label>Full Name</label><input id="editStaffName" placeholder="e.g. Arun Mathew"></div>
         </div>
-
         <div class="form-row">
-            <div>
-                <label>Role</label>
-                <input id="editStaffRole" placeholder="e.g. Senior Media Analyst">
-            </div>
-            <div>
-                <label>Department</label>
-                <input id="editStaffDept" placeholder="e.g. Operations">
-            </div>
+            <div><label>Role</label><input id="editStaffRole" placeholder="e.g. Senior Media Analyst"></div>
+            <div><label>Department</label><input id="editStaffDept" placeholder="e.g. Operations"></div>
         </div>
-
         <div class="form-row">
-            <div>
-                <label>Joined Date</label>
-                <input id="editStaffJoined" type="date">
-            </div>
-            <div>
-                <label>Daily Rate (₹)</label>
-                <input id="editStaffRate" type="number" step="0.01" placeholder="e.g. 500">
-            </div>
+            <div><label>Joined Date</label><input id="editStaffJoined" type="date"></div>
+            <div><label>Daily Rate (₹)</label><input id="editStaffRate" type="number" step="0.01" placeholder="e.g. 500"></div>
         </div>
 
         <div class="modal-actions">
@@ -1741,22 +1034,10 @@ Kerala, India</textarea>
         </div>
 
         <div class="attendance-summary" style="margin-bottom:16px;grid-template-columns:repeat(5,1fr);gap:12px;">
-            <div class="attendance-box" style="padding:14px;">
-                <p>Present</p>
-                <h2 id="staffDetailPresent" style="font-size:22px;">–</h2>
-            </div>
-            <div class="attendance-box" style="padding:14px;">
-                <p>Absent</p>
-                <h2 id="staffDetailAbsent" style="font-size:22px;">–</h2>
-            </div>
-            <div class="attendance-box" style="padding:14px;">
-                <p>Leave</p>
-                <h2 id="staffDetailLeave" style="font-size:22px;">–</h2>
-            </div>
-            <div class="attendance-box" style="padding:14px;">
-                <p>Week Offs</p>
-                <h2 id="staffDetailWeekOff" style="font-size:22px;">–</h2>
-            </div>
+            <div class="attendance-box" style="padding:14px;"><p>Present</p><h2 id="staffDetailPresent" style="font-size:22px;">–</h2></div>
+            <div class="attendance-box" style="padding:14px;"><p>Absent</p><h2 id="staffDetailAbsent" style="font-size:22px;">–</h2></div>
+            <div class="attendance-box" style="padding:14px;"><p>Leave</p><h2 id="staffDetailLeave" style="font-size:22px;">–</h2></div>
+            <div class="attendance-box" style="padding:14px;"><p>Week Offs</p><h2 id="staffDetailWeekOff" style="font-size:22px;">–</h2></div>
             <div class="attendance-box" style="background:#eff6ff;border-color:#bfdbfe;padding:14px;">
                 <p style="color:#1d4ed8;">Total Amount</p>
                 <h2 id="staffDetailTotal" style="color:#1d4ed8;font-size:20px;">–</h2>
@@ -1766,12 +1047,7 @@ Kerala, India</textarea>
         <div class="table-wrapper" style="max-height:340px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:10px;">
             <table>
                 <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Check In</th>
-                        <th>Check Out</th>
-                        <th>Status</th>
-                    </tr>
+                    <tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th></tr>
                 </thead>
                 <tbody id="staffDetailBody">
                     <tr><td colspan="4" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
@@ -1786,6 +1062,35 @@ Kerala, India</textarea>
     </div>
 </div>
 
+<!-- ================= LOGOUT CONFIRMATION MODAL ================= -->
+<div class="modal-backdrop" id="logoutModal">
+    <div class="modal" style="max-width: 420px; text-align: center;">
+        <div style="
+            width: 70px; height: 70px; margin: 0 auto 15px;
+            border-radius: 50%;
+            background: #fee2e2; color: #dc2626;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px;
+        ">🚪</div>
+
+        <h3 style="font-size: 19px; margin-bottom: 8px;">Log Out?</h3>
+        <p class="modal-sub" style="margin-bottom: 5px;">
+            You're about to log out of <strong>KCST Staff Pro</strong>.
+        </p>
+        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 5px;">
+            You'll need to sign in again to access the dashboard.
+        </p>
+
+        <div class="modal-actions" style="justify-content: center; gap: 12px; margin-top: 25px;">
+            <button class="btn-secondary" onclick="closeLogoutModal()" style="min-width: 110px;">
+                Cancel
+            </button>
+            <button class="btn-danger" onclick="confirmLogout()" id="logoutConfirmBtn" style="min-width: 110px;">
+                🚪 Yes, Log Out
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
 /* ================================================================
@@ -1809,7 +1114,6 @@ function showGlobalStatus(message, type = 'info') {
     el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
-/* Normalize status: handles 'week_off' or 'week off' */
 function normalizeStatus(raw) {
     const s = (raw || '').toLowerCase().trim().replace(/\s+/g, '_');
     if (s === 'present') return 'present';
@@ -1817,6 +1121,137 @@ function normalizeStatus(raw) {
     if (s === 'leave') return 'leave';
     if (s === 'week_off' || s === 'weekoff') return 'week_off';
     return s;
+}
+
+/* ================================================================
+   ADMIN LOGIN (Supabase Auth)
+   ================================================================ */
+async function doAdminLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const err = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+
+    err.style.display = 'none';
+
+    if (!email || !password) {
+        err.textContent = '❌ Please enter both email and password.';
+        err.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Logging in…';
+
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+
+    btn.disabled = false;
+    btn.textContent = '🔓 Login';
+
+    if (error) {
+        err.textContent = '❌ ' + error.message;
+        err.style.display = 'block';
+        return;
+    }
+
+    document.getElementById('loginScreen').style.display = 'none';
+
+    updateAdminLabels(data.user.email);
+
+    await loadDashboard();
+    setTimeout(() => loadCompany(), 300);
+    setTimeout(() => loadStaff(), 600);
+    setTimeout(() => loadAttendance(), 900);
+
+    showGlobalStatus('Welcome, ' + (data.user.email || ''), 'success');
+}
+
+function updateAdminLabels(email) {
+    const adminEmail = email || 'admin';
+    const display = adminEmail.split('@')[0].toUpperCase();
+    const initials = adminEmail.slice(0, 2).toUpperCase();
+
+    const nameEl = document.getElementById('adminNameLabel');
+    const avatarEl = document.getElementById('adminAvatar');
+    const ddName = document.getElementById('dropdownAdminName');
+    const ddEmail = document.getElementById('dropdownAdminEmail');
+
+    if (nameEl) nameEl.textContent = display;
+    if (avatarEl) avatarEl.textContent = initials;
+    if (ddName) ddName.textContent = display;
+    if (ddEmail) ddEmail.textContent = adminEmail;
+}
+
+// Press Enter to submit login
+document.addEventListener('keydown', (e) => {
+    const ls = document.getElementById('loginScreen');
+    if (e.key === 'Enter' && ls && ls.style.display !== 'none') {
+        doAdminLogin();
+    }
+});
+
+/* ================================================================
+   PROFILE DROPDOWN
+   ================================================================ */
+function toggleProfileDropdown(e) {
+    if (e) e.stopPropagation();
+    const dd = document.getElementById('profileDropdown');
+    const trigger = document.getElementById('profileTrigger');
+    dd.classList.toggle('show');
+    trigger.classList.toggle('open');
+}
+
+function closeProfileDropdown() {
+    document.getElementById('profileDropdown').classList.remove('show');
+    document.getElementById('profileTrigger').classList.remove('open');
+}
+
+function dropdownGoto(section) {
+    closeProfileDropdown();
+    showSection(section);
+}
+
+function dropdownLogout() {
+    closeProfileDropdown();
+    adminLogout();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    const wrapper = document.querySelector('.profile-wrapper');
+    if (wrapper && !e.target.closest('.profile-wrapper')) {
+        closeProfileDropdown();
+    }
+});
+
+/* ================================================================
+   LOGOUT (with confirmation modal)
+   ================================================================ */
+function adminLogout() {
+    document.getElementById('logoutModal').classList.add('show');
+}
+
+function closeLogoutModal() {
+    document.getElementById('logoutModal').classList.remove('show');
+    const btn = document.getElementById('logoutConfirmBtn');
+    btn.disabled = false;
+    btn.textContent = '🚪 Yes, Log Out';
+}
+
+async function confirmLogout() {
+    const btn = document.getElementById('logoutConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Logging out…';
+
+    try {
+        await _supabase.auth.signOut();
+        location.reload();
+    } catch (err) {
+        console.error('Logout error:', err);
+        btn.disabled = false;
+        btn.textContent = '🚪 Yes, Log Out';
+        showGlobalStatus('Logout failed: ' + err.message, 'error');
+    }
 }
 
 /* ================================================================
@@ -1835,14 +1270,13 @@ const titles = {
 
 menuItems.forEach(item => {
     item.addEventListener("click", function() {
-        const section = this.dataset.section;
-        showSection(section);
+        showSection(this.dataset.section);
     });
 });
 
 function showSection(sectionName) {
-    sections.forEach(section => section.classList.remove("active"));
-    menuItems.forEach(item => item.classList.remove("active"));
+    sections.forEach(s => s.classList.remove("active"));
+    menuItems.forEach(i => i.classList.remove("active"));
 
     const target = document.getElementById(sectionName);
     if (target) target.classList.add("active");
@@ -1944,8 +1378,6 @@ async function loadDashboard() {
                 </tr>`;
             }).join('');
         }
-
-        showGlobalStatus('Dashboard loaded from Supabase', 'success');
     } catch (err) {
         console.error('Dashboard load error:', err);
         showGlobalStatus('Error loading dashboard: ' + err.message, 'error');
@@ -1985,8 +1417,6 @@ async function loadStaff() {
                 </td>
             </tr>`;
         }).join('');
-
-        showGlobalStatus('Staff loaded from Supabase', 'success');
     } catch (err) {
         console.error('Staff load error:', err);
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#dc2626;">Error loading staff data.</td></tr>';
@@ -2065,8 +1495,6 @@ async function loadAttendance() {
                 </td>
             </tr>`;
         }).join('');
-
-        showGlobalStatus('Attendance loaded from Supabase', 'success');
     } catch (err) {
         console.error('Attendance load error:', err);
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626;">Error loading attendance.</td></tr>';
@@ -2074,7 +1502,6 @@ async function loadAttendance() {
     }
 }
 
-// Date change listener
 const attendanceDateInput = document.getElementById('attendanceDate');
 if (attendanceDateInput) {
     const today = new Date();
@@ -2095,14 +1522,10 @@ if (attendanceDateInput) {
    ================================================================ */
 function switchAttendanceView(view) {
     attendanceView = view;
-
     document.getElementById('tabDay').classList.toggle('active', view === 'day');
     document.getElementById('tabMonth').classList.toggle('active', view === 'month');
-
-    document.getElementById('attendanceDayView').style.display =
-        view === 'day' ? 'block' : 'none';
-    document.getElementById('attendanceMonthView').style.display =
-        view === 'month' ? 'block' : 'none';
+    document.getElementById('attendanceDayView').style.display = view === 'day' ? 'block' : 'none';
+    document.getElementById('attendanceMonthView').style.display = view === 'month' ? 'block' : 'none';
 
     if (view === 'day') loadAttendance();
     if (view === 'month') loadMonthAttendance();
@@ -2155,7 +1578,6 @@ async function loadMonthAttendance() {
         document.getElementById('monthTotalAbsent').textContent = totalAbsent;
         document.getElementById('monthTotalLeave').textContent = totalLeave;
 
-        // Per-staff summary
         const perStaff = {};
         attData.forEach(a => {
             const key = a.staff_id;
@@ -2195,7 +1617,6 @@ async function loadMonthAttendance() {
         staffBody.innerHTML = staffRows ||
             '<tr><td colspan="8" style="text-align:center;color:#94a3b8;">No records this month.</td></tr>';
 
-        // Daily breakdown
         const perDay = {};
         attData.forEach(a => {
             const key = a.date;
@@ -2224,8 +1645,6 @@ async function loadMonthAttendance() {
 
         dailyBody.innerHTML = dayRows ||
             '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">No records this month.</td></tr>';
-
-        showGlobalStatus(`Month data loaded (${attData.length} records)`, 'success');
     } catch (err) {
         console.error('Month attendance error:', err);
         staffBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;">Error loading month data.</td></tr>';
@@ -2234,7 +1653,6 @@ async function loadMonthAttendance() {
     }
 }
 
-// Default month input
 const monthInput = document.getElementById('attendanceMonth');
 if (monthInput) {
     const now = new Date();
@@ -2270,7 +1688,6 @@ function openStaffAttendanceDetail(staff) {
     }
 
     document.getElementById('staffAttDetailModal').classList.add('show');
-
     loadStaffDetailMonth();
 }
 
@@ -2320,7 +1737,6 @@ async function loadStaffDetailMonth() {
         document.getElementById('staffDetailLeave').textContent = leave;
         document.getElementById('staffDetailWeekOff').textContent = weekOff;
 
-        // Fetch daily rate
         let dailyRate = 0;
         try {
             const { data: staffRow } = await _supabase
@@ -2348,7 +1764,6 @@ async function loadStaffDetailMonth() {
 
         if (!data.length) {
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#94a3b8;">No records this month.</td></tr>';
-            showGlobalStatus(`No records for ${currentStaffDetailCode} this month`, 'info');
             return;
         }
 
@@ -2357,13 +1772,8 @@ async function loadStaffDetailMonth() {
                 weekday: 'short', day: '2-digit', month: 'short'
             });
             const s = normalizeStatus(a.status);
-
-            const checkIn = a.check_in
-                ? new Date(a.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : '—';
-            const checkOut = a.check_out
-                ? new Date(a.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : '—';
+            const checkIn = a.check_in ? new Date(a.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+            const checkOut = a.check_out ? new Date(a.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
 
             let badgeClass, label;
             if (s === 'present') { badgeClass = 'present'; label = 'Present'; }
@@ -2378,8 +1788,6 @@ async function loadStaffDetailMonth() {
                 <td><span class="badge ${badgeClass}">${label}</span></td>
             </tr>`;
         }).join('');
-
-        showGlobalStatus(`Loaded ${data.length} records for ${currentStaffDetailCode}`, 'success');
     } catch (err) {
         console.error('Staff detail load error:', err);
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#dc2626;">Error loading records.</td></tr>';
@@ -2618,9 +2026,6 @@ async function loadCompany() {
             document.getElementById('companyGstin').value = data.gstin || '';
             document.getElementById('companyAddress').value = data.address || '';
             document.getElementById('companyLogoName').textContent = data.name || 'StaffPro';
-            showGlobalStatus('Company info loaded from Supabase', 'success');
-        } else {
-            showGlobalStatus('No company record found. Default values shown.', 'info');
         }
     } catch (err) {
         console.error('Company load error:', err);
@@ -2665,7 +2070,7 @@ async function saveCompany() {
         if (result.error) throw result.error;
 
         document.getElementById('companyLogoName').textContent = payload.name || 'StaffPro';
-        showGlobalStatus('Company information saved to Supabase!', 'success');
+        showGlobalStatus('Company information saved!', 'success');
     } catch (err) {
         console.error('Company save error:', err);
         showGlobalStatus('Error saving company: ' + err.message, 'error');
@@ -2792,7 +2197,6 @@ async function markAttendance() {
     document.getElementById('markCheckOut').value = '';
 
     document.getElementById('markStatus').value = 'present';
-
     document.getElementById('markAttendanceModal').classList.add('show');
 
     const select = document.getElementById('markStaffSelect');
@@ -2819,7 +2223,6 @@ async function markAttendance() {
     } catch (err) {
         console.error('Load staff for attendance error:', err);
         select.innerHTML = '<option value="">— Error loading staff —</option>';
-        showGlobalStatus('Error loading staff list: ' + err.message, 'error');
     }
 }
 
@@ -2834,14 +2237,8 @@ async function saveAttendance() {
     const checkInTime = document.getElementById('markCheckIn').value;
     const checkOutTime = document.getElementById('markCheckOut').value;
 
-    if (!staffId) {
-        showGlobalStatus('Please select a staff member.', 'error');
-        return;
-    }
-    if (!date) {
-        showGlobalStatus('Please pick a date.', 'error');
-        return;
-    }
+    if (!staffId) { showGlobalStatus('Please select a staff member.', 'error'); return; }
+    if (!date) { showGlobalStatus('Please pick a date.', 'error'); return; }
 
     let checkInIso = null;
     let checkOutIso = null;
@@ -3016,6 +2413,7 @@ document.addEventListener('click', (e) => {
     if (e.target.id === 'markAttendanceModal') closeMarkModal();
     if (e.target.id === 'deleteAttendanceModal') closeDeleteAttendanceModal();
     if (e.target.id === 'staffAttDetailModal') closeStaffDetailModal();
+    if (e.target.id === 'logoutModal') closeLogoutModal();
 });
 
 document.addEventListener('keydown', (e) => {
@@ -3026,6 +2424,8 @@ document.addEventListener('keydown', (e) => {
         closeMarkModal();
         closeDeleteAttendanceModal();
         closeStaffDetailModal();
+        closeLogoutModal();
+        closeProfileDropdown();
     }
 });
 
@@ -3056,12 +2456,7 @@ function backupData() {
    INITIALIZATION
    ================================================================ */
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadDashboard();
-
-    setTimeout(() => { loadCompany(); }, 800);
-    setTimeout(() => { loadStaff(); }, 1200);
-    setTimeout(() => { loadAttendance(); }, 1600);
-
+    // Restore toggle states
     const saved = localStorage.getItem('staffpro_settings');
     if (saved) {
         const states = JSON.parse(saved);
@@ -3071,7 +2466,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    showGlobalStatus('Connected to Supabase · ' + SUPABASE_URL.split('//')[1], 'success');
+    // Check if already logged in
+    const { data: { session } } = await _supabase.auth.getSession();
+
+    if (session) {
+        document.getElementById('loginScreen').style.display = 'none';
+
+        updateAdminLabels(session.user.email);
+
+        await loadDashboard();
+        setTimeout(() => { loadCompany(); }, 800);
+        setTimeout(() => { loadStaff(); }, 1200);
+        setTimeout(() => { loadAttendance(); }, 1600);
+
+        showGlobalStatus('Logged in as ' + (session.user.email || ''), 'success');
+    }
+
+    // Listen for auth state changes (e.g., session expires)
+    _supabase.auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_OUT') {
+            location.reload();
+        }
+    });
 });
 </script>
 
