@@ -516,6 +516,70 @@
         .primary-btn { white-space: nowrap; }
         .quick-actions { grid-template-columns: 1fr 1fr; }
     }
+
+    /* ================= SALARY SECTION ================= */
+    .salary-toolbar {
+        display: flex; flex-wrap: wrap; align-items: center;
+        gap: 12px; margin-bottom: 18px;
+    }
+    .salary-toolbar input[type="month"] {
+        padding: 9px 12px; border: 1px solid #e2e8f0;
+        border-radius: 8px; font-size: 13px; background: white;
+    }
+    .salary-toolbar .status-pill {
+        padding: 6px 14px; border-radius: 30px; font-size: 12px;
+        font-weight: 600; background: #f1f5f9; color: #334155;
+    }
+    .salary-toolbar .status-pill.overdue { background: #fee2e2; color: #991b1b; }
+    .salary-toolbar .status-pill.paid { background: #dcfce7; color: #166534; }
+    .salary-toolbar .status-pill.partial { background: #fef3c7; color: #b45309; }
+
+    .salary-summary {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+        gap: 16px; margin-bottom: 22px;
+    }
+    .salary-summary .box {
+        background: white; border: 1px solid #e5e7eb;
+        border-radius: 14px; padding: 16px 18px;
+    }
+    .salary-summary .box p { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+    .salary-summary .box h2 { font-size: 22px; margin-top: 6px; }
+
+    .salary-amount { font-weight: 700; color: #1e293b; }
+    .salary-amount.paid { color: #16a34a; }
+    .salary-amount.overdue { color: #dc2626; }
+    .salary-amount.partial { color: #d97706; }
+
+    .carry-badge {
+        display: inline-block; background: #fef3c7; color: #b45309;
+        font-size: 10px; font-weight: 700; padding: 3px 9px;
+        border-radius: 20px; margin-left: 6px;
+    }
+    .collect-btn {
+        background: #16a34a; color: white; border: none;
+        border-radius: 8px; padding: 7px 13px; font-size: 12px;
+        font-weight: 600; cursor: pointer; transition: 0.15s;
+        white-space: nowrap;
+    }
+    .collect-btn:hover { background: #15803d; }
+    .collect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .collect-btn.secondary {
+        background: #f1f5f9; color: #334155;
+    }
+    .collect-btn.secondary:hover { background: #e2e8f0; }
+
+    /* Salary history */
+    .history-summary {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px; margin-bottom: 18px;
+    }
+    .history-summary .hbox {
+        background: #f8fafc; border: 1px solid #e5e7eb;
+        border-radius: 10px; padding: 12px;
+        text-align: center;
+    }
+    .history-summary .hbox p { font-size: 10px; color: #64748b; text-transform: uppercase; }
+    .history-summary .hbox h3 { font-size: 18px; margin-top: 5px; }
 </style>
 </head>
 
@@ -561,6 +625,7 @@
     <a class="menu-item" data-section="company"><span class="menu-icon">🏢</span>Company Info</a>
     <a class="menu-item" data-section="staff"><span class="menu-icon">👥</span>Staff Details</a>
     <a class="menu-item" data-section="attendance"><span class="menu-icon">🕒</span>Attendance</a>
+    <a class="menu-item" data-section="salary"><span class="menu-icon">💰</span>Salary Collection</a>
 
     <div class="menu-title">System</div>
     <a class="menu-item" data-section="settings"><span class="menu-icon">⚙️</span>Settings</a>
@@ -676,7 +741,7 @@
                     <div class="quick-actions">
                         <div class="quick-btn" onclick="showSection('staff')"><div>➕</div><span>Add Staff</span></div>
                         <div class="quick-btn" onclick="showSection('attendance')"><div>🕒</div><span>Attendance</span></div>
-                        <div class="quick-btn" onclick="showSection('company')"><div>🏢</div><span>Company</span></div>
+                        <div class="quick-btn" onclick="showSection('salary')"><div>💰</div><span>Salary</span></div>
                         <div class="quick-btn" onclick="showSection('settings')"><div>⚙️</div><span>Settings</span></div>
                     </div>
                 </div>
@@ -854,6 +919,54 @@ Kerala, India</textarea>
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SALARY COLLECTION ================= -->
+        <section class="section" id="salary">
+            <div class="page-head">
+                <div><h2>Salary Collection</h2><p>Record salary payments and carry forward unpaid amounts</p></div>
+                <button class="primary-btn" onclick="loadSalaryData()">🔄 Refresh</button>
+            </div>
+
+            <div class="salary-toolbar">
+                <label style="font-size:12px;color:#64748b;">Select Month:</label>
+                <input type="month" id="salaryMonth" onchange="loadSalaryData()">
+                <span class="status-pill" id="salaryStatusPill">—</span>
+                <span style="flex:1;"></span>
+                <button class="btn-secondary" onclick="loadSalaryData()" style="padding:8px 16px;">Apply</button>
+            </div>
+
+            <div class="salary-summary" id="salarySummary">
+                <div class="box"><p>Total Payable</p><h2 id="salaryTotalPayable">–</h2></div>
+                <div class="box"><p>Total Collected</p><h2 id="salaryTotalCollected" style="color:#16a34a;">–</h2></div>
+                <div class="box"><p>Outstanding</p><h2 id="salaryTotalOutstanding" style="color:#dc2626;">–</h2></div>
+                <div class="box"><p>Carried Forward</p><h2 id="salaryCarriedForward" style="color:#b45309;">–</h2></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Staff Salary Ledger</h3>
+                    <span style="font-size:12px;color:#64748b;">Unpaid amounts are automatically carried to next month</span>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Staff ID</th>
+                                <th>Name</th>
+                                <th>Payable</th>
+                                <th>Previous Due</th>
+                                <th>Collected</th>
+                                <th>Balance</th>
+                                <th style="text-align:right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salaryTableBody">
+                            <tr><td colspan="7" style="text-align:center;color:#94a3b8;">Select a month and click Refresh.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </section>
@@ -1062,6 +1175,129 @@ Kerala, India</textarea>
     </div>
 </div>
 
+<!-- ================= COLLECT SALARY MODAL ================= -->
+<div class="modal-backdrop" id="collectSalaryModal">
+    <div class="modal" style="max-width:520px;">
+        <h3 id="collectModalTitle">Collect Salary</h3>
+        <p class="modal-sub" id="collectSalarySub">Record a salary payment for this staff member.</p>
+
+        <input type="hidden" id="collectStaffCode">
+        <input type="hidden" id="collectSalaryMonth">
+        <input type="hidden" id="collectEditId">
+
+        <div class="form-row full">
+            <div>
+                <label>Staff</label>
+                <input id="collectStaffName" readonly style="background:#f1f5f9;color:#64748b;">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>Total Payable (₹)</label>
+                <input id="collectPayable" readonly style="background:#f1f5f9;color:#64748b;">
+            </div>
+            <div>
+                <label>Previous Due (₹)</label>
+                <input id="collectPreviousDue" readonly style="background:#f1f5f9;color:#b45309;">
+            </div>
+        </div>
+
+        <div class="form-row full">
+            <div>
+                <label>Amount to Collect (₹) *</label>
+                <input id="collectAmount" type="number" step="0.01" placeholder="Enter amount" style="background:white;">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label>Date *</label>
+                <input id="collectDate" type="date">
+            </div>
+            <div>
+                <label>Time *</label>
+                <input id="collectTime" type="time">
+            </div>
+        </div>
+
+        <div class="form-row full">
+            <div>
+                <label>Paid By *</label>
+                <input id="collectPaidBy" placeholder="e.g. Cash, UPI, Bank Transfer, Cheque">
+            </div>
+        </div>
+
+        <div class="form-row full">
+            <div>
+                <label>Notes (optional)</label>
+                <input id="collectNotes" placeholder="Any additional reference">
+            </div>
+        </div>
+
+        <div id="collectSalaryMessage" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeCollectSalaryModal()">Cancel</button>
+            <button class="primary-btn" id="collectSalarySaveBtn" onclick="saveSalaryCollection()">✅ Save Collection</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= SALARY HISTORY MODAL (EDIT/DELETE LIST) ================= -->
+<div class="modal-backdrop" id="salaryHistoryModal">
+    <div class="modal" style="max-width:820px;">
+        <h3 id="historyStaffName">Payment History</h3>
+        <p class="modal-sub" id="historyStaffMeta">—</p>
+
+        <div class="history-summary" id="historySummary">
+            <div class="hbox"><p>Total Payable</p><h3 id="historyTotalPayable" style="color:#1e293b;">–</h3></div>
+            <div class="hbox"><p>Total Collected</p><h3 id="historyTotalCollected" style="color:#16a34a;">–</h3></div>
+            <div class="hbox"><p>Balance</p><h3 id="historyBalance" style="color:#dc2626;">–</h3></div>
+        </div>
+
+        <div class="table-wrapper" style="max-height:380px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:10px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Amount</th>
+                        <th>Paid By</th>
+                        <th>Notes</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <tr><td colspan="6" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeSalaryHistoryModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= DELETE SALARY COLLECTION MODAL ================= -->
+<div class="modal-backdrop" id="deleteSalaryModal">
+    <div class="modal" style="max-width:440px;">
+        <h3>Delete Salary Collection</h3>
+        <p class="modal-sub">
+            Are you sure you want to delete this salary payment of
+            <strong id="deleteSalaryAmount">—</strong>
+            collected on <strong id="deleteSalaryDate">—</strong>?
+            This action cannot be undone.
+        </p>
+        <input type="hidden" id="deleteSalaryId">
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeDeleteSalaryModal()">Cancel</button>
+            <button class="btn-danger" onclick="confirmDeleteSalary()">🗑 Delete</button>
+        </div>
+    </div>
+</div>
+
 <!-- ================= LOGOUT CONFIRMATION MODAL ================= -->
 <div class="modal-backdrop" id="logoutModal">
     <div class="modal" style="max-width: 420px; text-align: center;">
@@ -1123,6 +1359,21 @@ function normalizeStatus(raw) {
     return s;
 }
 
+function formatCurrency(amount) {
+    if (amount === null || amount === undefined) return '₹0';
+    return '₹' + Number(amount).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 /* ================================================================
    ADMIN LOGIN (Supabase Auth)
    ================================================================ */
@@ -1182,7 +1433,6 @@ function updateAdminLabels(email) {
     if (ddEmail) ddEmail.textContent = adminEmail;
 }
 
-// Press Enter to submit login
 document.addEventListener('keydown', (e) => {
     const ls = document.getElementById('loginScreen');
     if (e.key === 'Enter' && ls && ls.style.display !== 'none') {
@@ -1216,7 +1466,6 @@ function dropdownLogout() {
     adminLogout();
 }
 
-// Close dropdown when clicking outside
 document.addEventListener('click', (e) => {
     const wrapper = document.querySelector('.profile-wrapper');
     if (wrapper && !e.target.closest('.profile-wrapper')) {
@@ -1225,7 +1474,7 @@ document.addEventListener('click', (e) => {
 });
 
 /* ================================================================
-   LOGOUT (with confirmation modal)
+   LOGOUT
    ================================================================ */
 function adminLogout() {
     document.getElementById('logoutModal').classList.add('show');
@@ -1265,6 +1514,7 @@ const titles = {
     company: ["Company Info", "Manage company information"],
     staff: ["Staff Details", "Manage employees and staff"],
     attendance: ["Attendance", "Track staff attendance"],
+    salary: ["Salary Collection", "Record salary payments & carry forward dues"],
     settings: ["Settings", "System configuration"]
 };
 
@@ -1299,6 +1549,7 @@ function showSection(sectionName) {
         else loadAttendance();
     }
     if (sectionName === 'company') loadCompany();
+    if (sectionName === 'salary') initSalaryMonth();
 }
 
 /* ================================================================
@@ -1372,7 +1623,7 @@ async function loadDashboard() {
                 const badgeClass = s === 'present' ? 'present' : s === 'leave' ? 'leave' : s === 'week_off' ? 'weekoff' : 'absent';
                 const label = s === 'week_off' ? 'Week Off' : (a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : '—');
                 return `<tr>
-                    <td><div class="staff-name"><div class="small-avatar">${initials}</div>${name}</div></td>
+                    <td><div class="staff-name"><div class="small-avatar">${initials}</div>${escapeHtml(name)}</div></td>
                     <td>${time}</td>
                     <td><span class="badge ${badgeClass}">${label}</span></td>
                 </tr>`;
@@ -1405,10 +1656,10 @@ async function loadStaff() {
         tbody.innerHTML = data.map(s => {
             const initials = (s.name || '??').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
             return `<tr>
-                <td>${s.staff_id || s.id}</td>
-                <td><div class="staff-name"><div class="small-avatar">${initials}</div>${s.name || '—'}</div></td>
-                <td>${s.role || '—'}</td>
-                <td>${s.department || '—'}</td>
+                <td>${escapeHtml(s.staff_id || s.id)}</td>
+                <td><div class="staff-name"><div class="small-avatar">${initials}</div>${escapeHtml(s.name || '—')}</div></td>
+                <td>${escapeHtml(s.role || '—')}</td>
+                <td>${escapeHtml(s.department || '—')}</td>
                 <td>${s.joined_date || '—'}</td>
                 <td>${s.daily_rate != null ? '₹' + s.daily_rate : '—'}</td>
                 <td style="text-align:right;white-space:nowrap;">
@@ -1478,8 +1729,8 @@ async function loadAttendance() {
             const badgeClass = s === 'present' ? 'present' : s === 'leave' ? 'leave' : s === 'week_off' ? 'weekoff' : 'absent';
             const label = s === 'week_off' ? 'Week Off' : (a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : '—');
             return `<tr>
-                <td>${staffCode}</td>
-                <td>${name}</td>
+                <td>${escapeHtml(staffCode)}</td>
+                <td>${escapeHtml(name)}</td>
                 <td>${checkIn}</td>
                 <td>${checkOut}</td>
                 <td><span class="badge ${badgeClass}">${label}</span></td>
@@ -1595,8 +1846,8 @@ async function loadMonthAttendance() {
             .map(([staffCode, counts]) => {
                 const info = staffMap[staffCode] || {};
                 return `<tr>
-                    <td>${staffCode}</td>
-                    <td>${info.name || 'Unknown'}</td>
+                    <td>${escapeHtml(staffCode)}</td>
+                    <td>${escapeHtml(info.name || 'Unknown')}</td>
                     <td><span class="badge present">${counts.present}</span></td>
                     <td><span class="badge absent">${counts.absent}</span></td>
                     <td><span class="badge leave">${counts.leave}</span></td>
@@ -2414,6 +2665,9 @@ document.addEventListener('click', (e) => {
     if (e.target.id === 'deleteAttendanceModal') closeDeleteAttendanceModal();
     if (e.target.id === 'staffAttDetailModal') closeStaffDetailModal();
     if (e.target.id === 'logoutModal') closeLogoutModal();
+    if (e.target.id === 'collectSalaryModal') closeCollectSalaryModal();
+    if (e.target.id === 'salaryHistoryModal') closeSalaryHistoryModal();
+    if (e.target.id === 'deleteSalaryModal') closeDeleteSalaryModal();
 });
 
 document.addEventListener('keydown', (e) => {
@@ -2425,6 +2679,9 @@ document.addEventListener('keydown', (e) => {
         closeDeleteAttendanceModal();
         closeStaffDetailModal();
         closeLogoutModal();
+        closeCollectSalaryModal();
+        closeSalaryHistoryModal();
+        closeDeleteSalaryModal();
         closeProfileDropdown();
     }
 });
@@ -2453,10 +2710,538 @@ function backupData() {
 }
 
 /* ================================================================
+   SALARY COLLECTION — WITH EDIT & DELETE
+   ================================================================ */
+
+let currentSalaryMonth = '';
+let salaryData = [];
+let allStaffList = [];
+
+function initSalaryMonth() {
+    const input = document.getElementById('salaryMonth');
+    if (!input.value) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        input.value = `${y}-${m}`;
+    }
+    loadSalaryData();
+}
+
+async function loadSalaryData() {
+    const monthInput = document.getElementById('salaryMonth');
+    const monthValue = monthInput.value;
+    if (!monthValue) {
+        showGlobalStatus('Please select a month.', 'error');
+        return;
+    }
+
+    currentSalaryMonth = monthValue;
+    const [year, month] = monthValue.split('-').map(Number);
+    const firstDay = `${monthValue}-01`;
+    const lastDayDate = new Date(year, month, 0);
+    const lastDay = `${monthValue}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+
+    const tbody = document.getElementById('salaryTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">Loading…</td></tr>';
+
+    const pill = document.getElementById('salaryStatusPill');
+    pill.textContent = `📅 ${monthValue}`;
+    pill.className = 'status-pill';
+
+    try {
+        const { data: staffData, error: staffErr } = await _supabase
+            .from('staff')
+            .select('staff_id, name, role, department, daily_rate')
+            .order('staff_id', { ascending: true });
+
+        if (staffErr) throw staffErr;
+        allStaffList = staffData || [];
+
+        const { data: attData, error: attErr } = await _supabase
+            .from('attendance')
+            .select('staff_id, date, status')
+            .gte('date', firstDay)
+            .lte('date', lastDay);
+
+        if (attErr) throw attErr;
+
+        const { data: collectionData, error: collErr } = await _supabase
+            .from('salary_collections')
+            .select('*')
+            .eq('salary_month', monthValue);
+
+        if (collErr) {
+            if (collErr.code === '42P01' || collErr.message?.includes('does not exist')) {
+                console.warn('salary_collections table not found.');
+                showGlobalStatus('Note: salary_collections table missing. Create it in Supabase.', 'info');
+            } else {
+                throw collErr;
+            }
+        }
+
+        const collections = collectionData || [];
+
+        // Previous month carry forward
+        const prevMonthDate = new Date(year, month - 2, 1);
+        const prevMonthValue = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        const prevFirstDay = `${prevMonthValue}-01`;
+        const prevLastDayDate = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth() + 1, 0);
+        const prevLastDay = `${prevMonthValue}-${String(prevLastDayDate.getDate()).padStart(2, '0')}`;
+
+        const { data: prevAttData } = await _supabase
+            .from('attendance')
+            .select('staff_id, date, status')
+            .gte('date', prevFirstDay)
+            .lte('date', prevLastDay);
+
+        const { data: prevCollections } = await _supabase
+            .from('salary_collections')
+            .select('*')
+            .eq('salary_month', prevMonthValue);
+
+        const prevSummary = {};
+        (prevAttData || []).forEach(a => {
+            const key = a.staff_id;
+            if (!prevSummary[key]) prevSummary[key] = { present: 0, week_off: 0 };
+            const s = normalizeStatus(a.status);
+            if (s === 'present') prevSummary[key].present++;
+            else if (s === 'week_off') prevSummary[key].week_off++;
+        });
+
+        const prevCollected = {};
+        (prevCollections || []).forEach(c => {
+            const key = c.staff_id;
+            prevCollected[key] = (prevCollected[key] || 0) + Number(c.amount || 0);
+        });
+
+        const previousDues = {};
+        allStaffList.forEach(s => {
+            const rate = Number(s.daily_rate || 0);
+            const prev = prevSummary[s.staff_id] || { present: 0, week_off: 0 };
+            const prevPayable = (prev.present + prev.week_off) * rate;
+            const prevPaid = prevCollected[s.staff_id] || 0;
+            const due = Math.max(0, prevPayable - prevPaid);
+            if (due > 0) previousDues[s.staff_id] = due;
+        });
+
+        const summary = {};
+        allStaffList.forEach(s => {
+            summary[s.staff_id] = {
+                staff_id: s.staff_id,
+                name: s.name,
+                role: s.role,
+                department: s.department,
+                daily_rate: Number(s.daily_rate || 0),
+                present: 0,
+                week_off: 0,
+            };
+        });
+
+        (attData || []).forEach(a => {
+            if (summary[a.staff_id]) {
+                const s = normalizeStatus(a.status);
+                if (s === 'present') summary[a.staff_id].present++;
+                else if (s === 'week_off') summary[a.staff_id].week_off++;
+            }
+        });
+
+        salaryData = Object.values(summary).map(item => {
+            const payable = (item.present + item.week_off) * item.daily_rate;
+            const prevDue = previousDues[item.staff_id] || 0;
+            const collected = collections
+                .filter(c => c.staff_id === item.staff_id)
+                .reduce((sum, c) => sum + Number(c.amount || 0), 0);
+            const totalDue = payable + prevDue;
+            const balance = totalDue - collected;
+
+            return {
+                ...item,
+                payable,
+                previousDue: prevDue,
+                collected,
+                balance,
+            };
+        });
+
+        const totalPayable = salaryData.reduce((sum, s) => sum + s.payable, 0);
+        const totalCollected = salaryData.reduce((sum, s) => sum + s.collected, 0);
+        const totalOutstanding = salaryData.reduce((sum, s) => sum + Math.max(0, s.balance), 0);
+        const totalCarried = salaryData.reduce((sum, s) => sum + s.previousDue, 0);
+
+        document.getElementById('salaryTotalPayable').textContent = formatCurrency(totalPayable);
+        document.getElementById('salaryTotalCollected').textContent = formatCurrency(totalCollected);
+        document.getElementById('salaryTotalOutstanding').textContent = formatCurrency(totalOutstanding);
+        document.getElementById('salaryCarriedForward').textContent = formatCurrency(totalCarried);
+
+        if (totalOutstanding > 0) {
+            pill.className = 'status-pill overdue';
+            pill.textContent = `⚠️ ${monthValue} · Outstanding ${formatCurrency(totalOutstanding)}`;
+        } else if (totalPayable > 0 && totalCollected >= totalPayable + totalCarried) {
+            pill.className = 'status-pill paid';
+            pill.textContent = `✅ ${monthValue} · Fully Paid`;
+        } else if (totalCollected > 0) {
+            pill.className = 'status-pill partial';
+            pill.textContent = `⏳ ${monthValue} · Partial Payment`;
+        } else {
+            pill.className = 'status-pill';
+            pill.textContent = `📅 ${monthValue}`;
+        }
+
+        renderSalaryTable();
+
+    } catch (err) {
+        console.error('Salary load error:', err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#dc2626;">Error loading salary data.</td></tr>';
+        showGlobalStatus('Error loading salary: ' + err.message, 'error');
+    }
+}
+
+function renderSalaryTable() {
+    const tbody = document.getElementById('salaryTableBody');
+    if (!salaryData.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">No staff found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = salaryData.map(s => {
+        const balance = s.balance;
+        const balanceClass = balance > 0 ? 'overdue' : 'paid';
+        const balanceLabel = balance > 0 ? formatCurrency(balance) : '✅ Paid';
+
+        const carryBadge = s.previousDue > 0
+            ? `<span class="carry-badge">↩️ Carried ${formatCurrency(s.previousDue)}</span>`
+            : '';
+
+        return `<tr>
+            <td><strong>${escapeHtml(s.staff_id)}</strong></td>
+            <td>${escapeHtml(s.name)}</td>
+            <td class="salary-amount">${formatCurrency(s.payable)}</td>
+            <td class="salary-amount" style="color:#b45309;">${s.previousDue > 0 ? formatCurrency(s.previousDue) : '—'}</td>
+            <td class="salary-amount paid">${formatCurrency(s.collected)}</td>
+            <td class="salary-amount ${balanceClass}">
+                ${balanceLabel}
+                ${carryBadge}
+            </td>
+            <td style="text-align:right;white-space:nowrap;">
+                <button class="collect-btn" onclick='openCollectSalaryModal("${s.staff_id}")' ${balance <= 0 ? 'disabled' : ''}>
+                    💰 Collect
+                </button>
+                <button class="action-btn edit" title="Payment History (Edit/Delete)"
+                        onclick='openSalaryHistoryModal("${s.staff_id}")'
+                        style="margin-left:6px;">📋</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+/* ================================================================
+   COLLECT SALARY MODAL
+   ================================================================ */
+function openCollectSalaryModal(staffId) {
+    const staff = salaryData.find(s => s.staff_id === staffId);
+    if (!staff) {
+        showGlobalStatus('Staff not found.', 'error');
+        return;
+    }
+
+    // Reset edit mode
+    document.getElementById('collectEditId').value = '';
+    document.getElementById('collectModalTitle').textContent = 'Collect Salary';
+    document.getElementById('collectSalarySaveBtn').textContent = '✅ Save Collection';
+
+    document.getElementById('collectStaffCode').value = staff.staff_id;
+    document.getElementById('collectSalaryMonth').value = currentSalaryMonth;
+    document.getElementById('collectStaffName').value = staff.name;
+    document.getElementById('collectPayable').value = staff.payable.toFixed(2);
+    document.getElementById('collectPreviousDue').value = staff.previousDue.toFixed(2);
+
+    const outstanding = Math.max(0, staff.balance);
+    document.getElementById('collectAmount').value = outstanding.toFixed(2);
+
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    document.getElementById('collectDate').value = `${yyyy}-${mm}-${dd}`;
+
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('collectTime').value = `${hh}:${min}`;
+
+    document.getElementById('collectPaidBy').value = '';
+    document.getElementById('collectNotes').value = '';
+
+    document.getElementById('collectSalarySub').textContent =
+        `Record a salary payment for ${staff.name} (${staff.staff_id}) — ${currentSalaryMonth}`;
+
+    document.getElementById('collectSalaryMessage').style.display = 'none';
+    document.getElementById('collectSalaryModal').classList.add('show');
+}
+
+function closeCollectSalaryModal() {
+    document.getElementById('collectSalaryModal').classList.remove('show');
+}
+
+async function saveSalaryCollection() {
+    const editId = document.getElementById('collectEditId').value;
+    const staffCode = document.getElementById('collectStaffCode').value;
+    const salaryMonth = document.getElementById('collectSalaryMonth').value;
+    const amount = parseFloat(document.getElementById('collectAmount').value);
+    const date = document.getElementById('collectDate').value;
+    const time = document.getElementById('collectTime').value;
+    const paidBy = document.getElementById('collectPaidBy').value.trim();
+    const notes = document.getElementById('collectNotes').value.trim();
+
+    const msgEl = document.getElementById('collectSalaryMessage');
+    msgEl.style.display = 'none';
+
+    if (!staffCode || !salaryMonth) {
+        msgEl.textContent = '❌ Missing staff or month information.';
+        msgEl.style.background = '#fee2e2'; msgEl.style.color = '#991b1b';
+        msgEl.style.display = 'block';
+        return;
+    }
+    if (!amount || amount <= 0) {
+        msgEl.textContent = '❌ Please enter a valid amount greater than 0.';
+        msgEl.style.background = '#fee2e2'; msgEl.style.color = '#991b1b';
+        msgEl.style.display = 'block';
+        return;
+    }
+    if (!date) {
+        msgEl.textContent = '❌ Please select a date.';
+        msgEl.style.background = '#fee2e2'; msgEl.style.color = '#991b1b';
+        msgEl.style.display = 'block';
+        return;
+    }
+    if (!time) {
+        msgEl.textContent = '❌ Please select a time.';
+        msgEl.style.background = '#fee2e2'; msgEl.style.color = '#991b1b';
+        msgEl.style.display = 'block';
+        return;
+    }
+    if (!paidBy) {
+        msgEl.textContent = '❌ Please enter who paid (e.g. Cash, UPI, Bank Transfer).';
+        msgEl.style.background = '#fee2e2'; msgEl.style.color = '#991b1b';
+        msgEl.style.display = 'block';
+        return;
+    }
+
+    const saveBtn = document.getElementById('collectSalarySaveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = editId ? 'Updating…' : 'Saving…';
+
+    try {
+        const payload = {
+            staff_id: staffCode,
+            salary_month: salaryMonth,
+            amount: amount,
+            collected_date: date,
+            collected_time: time,
+            paid_by: paidBy,
+            notes: notes || null,
+        };
+
+        let error;
+        if (editId) {
+            const res = await _supabase
+                .from('salary_collections')
+                .update(payload)
+                .eq('id', editId);
+            error = res.error;
+        } else {
+            payload.created_at = new Date().toISOString();
+            const res = await _supabase
+                .from('salary_collections')
+                .insert([payload]);
+            error = res.error;
+        }
+
+        if (error) throw error;
+
+        msgEl.textContent = editId
+            ? `✅ Payment updated successfully.`
+            : `✅ Payment of ${formatCurrency(amount)} recorded for ${staffCode}.`;
+        msgEl.style.background = '#dcfce7'; msgEl.style.color = '#166534';
+        msgEl.style.display = 'block';
+
+        showGlobalStatus(editId ? 'Salary collection updated.' : `Salary collected: ${formatCurrency(amount)} from ${staffCode}`, 'success');
+
+        setTimeout(() => {
+            closeCollectSalaryModal();
+            loadSalaryData();
+            // Refresh history if open
+            if (document.getElementById('salaryHistoryModal').classList.contains('show')) {
+                const code = document.getElementById('historyStaffName').dataset.staffCode;
+                if (code) openSalaryHistoryModal(code);
+            }
+        }, 700);
+
+    } catch (err) {
+        console.error('Salary collection error:', err);
+        msgEl.textContent = '❌ Error saving: ' + err.message;
+        msgEl.style.background = '#fee2e2'; msgEl.style.color = '#991b1b';
+        msgEl.style.display = 'block';
+        showGlobalStatus('Error saving salary collection: ' + err.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = editId ? '💾 Update Collection' : '✅ Save Collection';
+    }
+}
+
+/* ================================================================
+   SALARY HISTORY MODAL — with Edit and Delete
+   ================================================================ */
+async function openSalaryHistoryModal(staffId) {
+    const staff = salaryData.find(s => s.staff_id === staffId);
+    if (!staff) {
+        showGlobalStatus('Staff not found.', 'error');
+        return;
+    }
+
+    document.getElementById('historyStaffName').textContent = `${staff.name} — Payment History`;
+    document.getElementById('historyStaffName').dataset.staffCode = staffId;
+    document.getElementById('historyStaffMeta').textContent =
+        `${staffId} · Month: ${currentSalaryMonth} · Daily Rate: ${formatCurrency(staff.daily_rate)}`;
+
+    document.getElementById('historyTotalPayable').textContent = formatCurrency(staff.payable);
+    document.getElementById('historyTotalCollected').textContent = formatCurrency(staff.collected);
+    document.getElementById('historyBalance').textContent = formatCurrency(Math.max(0, staff.balance));
+
+    const tbody = document.getElementById('historyTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">Loading…</td></tr>';
+
+    document.getElementById('salaryHistoryModal').classList.add('show');
+
+    try {
+        const { data, error } = await _supabase
+            .from('salary_collections')
+            .select('*')
+            .eq('staff_id', staffId)
+            .eq('salary_month', currentSalaryMonth)
+            .order('collected_date', { ascending: false });
+
+        if (error) throw error;
+
+        if (!data || !data.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No payments recorded yet.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.map(c => {
+            const displayDate = c.collected_date
+                ? new Date(c.collected_date).toLocaleDateString(undefined, {
+                    day: '2-digit', month: 'short', year: 'numeric'
+                })
+                : '—';
+            const displayTime = c.collected_time || '—';
+            return `<tr>
+                <td>${displayDate}</td>
+                <td>${escapeHtml(displayTime)}</td>
+                <td class="salary-amount paid">${formatCurrency(c.amount)}</td>
+                <td>${escapeHtml(c.paid_by || '—')}</td>
+                <td style="font-size:12px;color:#64748b;">${escapeHtml(c.notes || '—')}</td>
+                <td style="text-align:right;white-space:nowrap;">
+                    <button class="action-btn edit" title="Edit"
+                            onclick='openEditSalaryCollection(${JSON.stringify(c)})'>✏️</button>
+                    <button class="action-btn delete" title="Delete"
+                            onclick='openDeleteSalaryCollection(${JSON.stringify({
+                                id: c.id,
+                                amount: c.amount,
+                                collected_date: c.collected_date,
+                                staff_id: c.staff_id
+                            })})'>🗑️</button>
+                </td>
+            </tr>`;
+        }).join('');
+
+    } catch (err) {
+        console.error('History load error:', err);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc2626;">Error loading payments.</td></tr>';
+    }
+}
+
+function closeSalaryHistoryModal() {
+    document.getElementById('salaryHistoryModal').classList.remove('show');
+}
+
+// Open collect modal in EDIT mode, pre-filled with existing data
+function openEditSalaryCollection(collection) {
+    // Find the salary record to get payable/previous due
+    const staff = salaryData.find(s => s.staff_id === collection.staff_id);
+
+    document.getElementById('collectEditId').value = collection.id;
+    document.getElementById('collectModalTitle').textContent = 'Edit Salary Collection';
+    document.getElementById('collectSalarySaveBtn').textContent = '💾 Update Collection';
+
+    document.getElementById('collectStaffCode').value = collection.staff_id;
+    document.getElementById('collectSalaryMonth').value = collection.salary_month || currentSalaryMonth;
+    document.getElementById('collectStaffName').value = staff ? staff.name : collection.staff_id;
+    document.getElementById('collectPayable').value = staff ? staff.payable.toFixed(2) : '0.00';
+    document.getElementById('collectPreviousDue').value = staff ? staff.previousDue.toFixed(2) : '0.00';
+
+    document.getElementById('collectAmount').value = collection.amount;
+    document.getElementById('collectDate').value = collection.collected_date || '';
+    document.getElementById('collectTime').value = collection.collected_time || '';
+    document.getElementById('collectPaidBy').value = collection.paid_by || '';
+    document.getElementById('collectNotes').value = collection.notes || '';
+
+    document.getElementById('collectSalarySub').textContent =
+        `Editing payment of ${formatCurrency(collection.amount)} for ${staff ? staff.name : collection.staff_id}`;
+
+    document.getElementById('collectSalaryMessage').style.display = 'none';
+
+    // Close history modal, open collect modal
+    closeSalaryHistoryModal();
+    document.getElementById('collectSalaryModal').classList.add('show');
+}
+
+// Open delete confirmation modal
+function openDeleteSalaryCollection(info) {
+    document.getElementById('deleteSalaryId').value = info.id;
+    document.getElementById('deleteSalaryAmount').textContent = formatCurrency(info.amount);
+    document.getElementById('deleteSalaryDate').textContent = info.collected_date || '—';
+    document.getElementById('deleteSalaryModal').classList.add('show');
+}
+
+function closeDeleteSalaryModal() {
+    document.getElementById('deleteSalaryModal').classList.remove('show');
+}
+
+async function confirmDeleteSalary() {
+    const id = document.getElementById('deleteSalaryId').value;
+    if (!id) return;
+
+    try {
+        const { error } = await _supabase
+            .from('salary_collections')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        closeDeleteSalaryModal();
+        showGlobalStatus('Salary payment deleted successfully.', 'success');
+
+        // Reload salary table
+        loadSalaryData();
+
+        // Refresh history if it was open before (reopen for same staff)
+        const staffCode = document.getElementById('historyStaffName').dataset.staffCode;
+        if (staffCode) {
+            setTimeout(() => openSalaryHistoryModal(staffCode), 400);
+        }
+
+    } catch (err) {
+        console.error('Delete salary error:', err);
+        showGlobalStatus('Error deleting salary payment: ' + err.message, 'error');
+    }
+}
+
+/* ================================================================
    INITIALIZATION
    ================================================================ */
 document.addEventListener('DOMContentLoaded', async () => {
-    // Restore toggle states
     const saved = localStorage.getItem('staffpro_settings');
     if (saved) {
         const states = JSON.parse(saved);
@@ -2466,7 +3251,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Check if already logged in
+    const salaryMonthInput = document.getElementById('salaryMonth');
+    if (salaryMonthInput && !salaryMonthInput.value) {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        salaryMonthInput.value = `${y}-${m}`;
+    }
+
     const { data: { session } } = await _supabase.auth.getSession();
 
     if (session) {
@@ -2482,7 +3274,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         showGlobalStatus('Logged in as ' + (session.user.email || ''), 'success');
     }
 
-    // Listen for auth state changes (e.g., session expires)
     _supabase.auth.onAuthStateChange((event) => {
         if (event === 'SIGNED_OUT') {
             location.reload();
