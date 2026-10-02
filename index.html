@@ -1457,6 +1457,429 @@ function getWorkingHoursClass(hours) {
 }
 
 /* ================================================================
+   PROFESSIONAL PRINT HELPERS
+   ================================================================ */
+function getPrintStyles() {
+    return `
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        @page { size: A4; margin: 15mm 12mm; }
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            color: #1e293b;
+            background: white;
+            padding: 20px;
+            line-height: 1.5;
+            font-size: 12px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* ============ LETTERHEAD ============ */
+        .letterhead {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 14px;
+            border-bottom: 3px double #1e293b;
+            margin-bottom: 22px;
+        }
+        .letterhead-left {
+            display: flex; align-items: center; gap: 15px;
+        }
+        .letterhead-logo {
+            width: 60px; height: 60px; border-radius: 12px;
+            background: linear-gradient(135deg, #1d4ed8, #6d28d9);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 26px; font-weight: 700;
+            flex-shrink: 0;
+            letter-spacing: -1px;
+        }
+        .letterhead-company h1 {
+            font-size: 20px; color: #0f172a; font-weight: 700;
+            letter-spacing: 0.3px; line-height: 1.2;
+        }
+        .letterhead-company p {
+            font-size: 11px; color: #64748b; margin-top: 3px;
+        }
+        .letterhead-right {
+            text-align: right; font-size: 10px; color: #64748b;
+            line-height: 1.6;
+        }
+        .letterhead-right strong { color: #1e293b; }
+
+        /* ============ DOCUMENT TITLE ============ */
+        .doc-title {
+            text-align: center;
+            margin: 20px 0 22px;
+        }
+        .doc-title h2 {
+            display: inline-block;
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            padding: 8px 32px;
+            border-top: 2px solid #1e293b;
+            border-bottom: 2px solid #1e293b;
+        }
+        .doc-title p {
+            font-size: 11px; color: #64748b;
+            margin-top: 8px; letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* ============ REFERENCE BAR ============ */
+        .ref-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f1f5f9;
+            border-left: 4px solid #1d4ed8;
+            padding: 10px 16px;
+            margin-bottom: 22px;
+            font-size: 11px;
+            border-radius: 0 6px 6px 0;
+        }
+        .ref-bar div { color: #475569; }
+        .ref-bar strong { color: #0f172a; font-weight: 600; }
+
+        /* ============ INFO GRID ============ */
+        .info-grid-2 {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 18px; margin-bottom: 22px;
+        }
+        .info-panel {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .info-panel-title {
+            background: #1e293b;
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding: 8px 14px;
+        }
+        .info-panel-body { padding: 12px 14px; }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            font-size: 11px;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-row span:first-child { color: #64748b; }
+        .info-row span:last-child {
+            color: #0f172a; font-weight: 600; text-align: right;
+        }
+
+        /* ============ STAT SUMMARY ============ */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 10px;
+            margin-bottom: 22px;
+        }
+        .stat-card {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 12px 8px;
+            text-align: center;
+            background: white;
+        }
+        .stat-card .label {
+            font-size: 9px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .stat-card .value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .stat-card.accent { background: #eff6ff; border-color: #93c5fd; }
+        .stat-card.accent .value { color: #1d4ed8; }
+        .stat-card.success { background: #f0fdf4; border-color: #86efac; }
+        .stat-card.success .value { color: #15803d; }
+        .stat-card.warning { background: #fffbeb; border-color: #fcd34d; }
+        .stat-card.warning .value { color: #b45309; }
+        .stat-card.danger { background: #fef2f2; border-color: #fca5a5; }
+        .stat-card.danger .value { color: #b91c1c; }
+        .stat-card.purple { background: #f5f3ff; border-color: #c4b5fd; }
+        .stat-card.purple .value { color: #6d28d9; }
+
+        /* ============ SECTION HEADER ============ */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 24px 0 14px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #1e293b;
+        }
+        .section-header-icon {
+            width: 26px; height: 26px; border-radius: 6px;
+            background: #1e293b; color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; flex-shrink: 0;
+        }
+        .section-header h3 {
+            font-size: 13px; font-weight: 700; color: #0f172a;
+            text-transform: uppercase; letter-spacing: 1.2px;
+        }
+
+        /* ============ DATA TABLE ============ */
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin-bottom: 18px;
+            border: 1px solid #cbd5e1;
+        }
+        table.data-table thead {
+            background: #1e293b;
+        }
+        table.data-table th {
+            padding: 9px 8px;
+            color: white;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            text-align: left;
+            border-right: 1px solid #334155;
+        }
+        table.data-table th:last-child { border-right: none; }
+        table.data-table th.center { text-align: center; }
+        table.data-table th.right { text-align: right; }
+        table.data-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #f1f5f9;
+            font-size: 11px;
+            vertical-align: middle;
+        }
+        table.data-table td:last-child { border-right: none; }
+        table.data-table tbody tr:nth-child(even) { background: #f8fafc; }
+        table.data-table tbody tr:last-child td { border-bottom: 1px solid #cbd5e1; }
+        table.data-table tfoot td {
+            padding: 10px 8px;
+            background: #f1f5f9;
+            font-weight: 700;
+            color: #0f172a;
+            border-top: 2px solid #1e293b;
+            border-bottom: none;
+            font-size: 11px;
+        }
+        td.center { text-align: center; }
+        td.right { text-align: right; }
+        td.mono {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 10px;
+            letter-spacing: 0.3px;
+        }
+        .badge-print {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .badge-print.present { background: #dcfce7; color: #15803d; }
+        .badge-print.absent { background: #fee2e2; color: #b91c1c; }
+        .badge-print.leave { background: #fef3c7; color: #b45309; }
+        .badge-print.weekoff { background: #e0e7ff; color: #4338ca; }
+        .badge-print.paid { background: #dcfce7; color: #15803d; }
+        .badge-print.due { background: #fee2e2; color: #b91c1c; }
+
+        /* ============ FINANCIAL HIGHLIGHT ============ */
+        .financial-highlight {
+            border: 2px solid #1e293b;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .financial-highlight-header {
+            background: #1e293b;
+            color: white;
+            padding: 8px 16px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        .financial-highlight-body {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0;
+        }
+        .financial-cell {
+            padding: 14px 12px;
+            text-align: center;
+            border-right: 1px solid #cbd5e1;
+        }
+        .financial-cell:last-child { border-right: none; }
+        .financial-cell .flabel {
+            font-size: 9px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .financial-cell .fvalue {
+            font-size: 17px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .financial-cell.grand { background: #eff6ff; }
+        .financial-cell.grand .fvalue { color: #1d4ed8; }
+        .financial-cell.due { background: #fef2f2; }
+        .financial-cell.due .fvalue { color: #b91c1c; }
+        .financial-cell.paid { background: #f0fdf4; }
+        .financial-cell.paid .fvalue { color: #15803d; }
+
+        /* ============ OUTSTANDING / BALANCE BANNER ============ */
+        .balance-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 2px solid;
+        }
+        .balance-banner.pending {
+            background: #fef2f2;
+            border-color: #fca5a5;
+        }
+        .balance-banner.pending .label { color: #991b1b; }
+        .balance-banner.pending .amount { color: #b91c1c; }
+        .balance-banner.cleared {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+        .balance-banner.cleared .label { color: #166534; }
+        .balance-banner.cleared .amount { color: #15803d; }
+        .balance-banner .label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-bottom: 3px;
+        }
+        .balance-banner .sub {
+            font-size: 10px; color: #64748b;
+        }
+        .balance-banner .amount {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        /* ============ SIGNATURES ============ */
+        .signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            margin-top: 60px;
+            margin-bottom: 20px;
+        }
+        .sig-block {
+            text-align: center;
+            padding-top: 40px;
+            border-top: 1px solid #1e293b;
+        }
+        .sig-block .sig-name {
+            font-size: 11px; font-weight: 700;
+            color: #0f172a; letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .sig-block .sig-role {
+            font-size: 9px;
+            color: #64748b;
+            margin-top: 3px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ============ FOOTER ============ */
+        .doc-footer {
+            margin-top: 30px;
+            padding-top: 12px;
+            border-top: 1px solid #cbd5e1;
+            text-align: center;
+            font-size: 9px;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+        }
+        .doc-footer strong { color: #64748b; }
+
+        /* ============ PRINT BUTTONS ============ */
+        .print-actions {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .print-actions button {
+            background: #1d4ed8; color: white;
+            border: none; padding: 10px 24px;
+            border-radius: 6px; font-size: 13px;
+            font-weight: 600; cursor: pointer;
+            margin: 0 5px;
+            font-family: inherit;
+        }
+        .print-actions button:hover { background: #1e40af; }
+        .print-actions button.secondary {
+            background: white; color: #334155;
+            border: 1px solid #cbd5e1;
+        }
+        .print-actions button.secondary:hover { background: #f8fafc; }
+
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none !important; }
+            .letterhead { page-break-inside: avoid; }
+            .financial-highlight, .balance-banner { page-break-inside: avoid; }
+            table.data-table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; }
+        }
+    `;
+}
+
+function buildLetterhead(company) {
+    const companyName = company.name || 'StaffPro Technologies';
+    const initials = companyName.substring(0, 2).toUpperCase();
+    return `
+        <div class="letterhead">
+            <div class="letterhead-left">
+                <div class="letterhead-logo">${escapeHtml(initials)}</div>
+                <div class="letterhead-company">
+                    <h1>${escapeHtml(companyName)}</h1>
+                    ${company.address ? `<p>${String(company.address).replace(/\n/g, ' · ')}</p>` : ''}
+                </div>
+            </div>
+            <div class="letterhead-right">
+                ${company.phone ? `<div><strong>Phone:</strong> ${escapeHtml(company.phone)}</div>` : ''}
+                ${company.email ? `<div><strong>Email:</strong> ${escapeHtml(company.email)}</div>` : ''}
+                ${company.website ? `<div><strong>Web:</strong> ${escapeHtml(company.website)}</div>` : ''}
+                ${company.gstin ? `<div><strong>GSTIN:</strong> ${escapeHtml(company.gstin)}</div>` : ''}
+                ${company.reg_number ? `<div><strong>Reg No:</strong> ${escapeHtml(company.reg_number)}</div>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+/* ================================================================
    ADMIN LOGIN (Supabase Auth)
    ================================================================ */
 async function doAdminLogin() {
@@ -2017,7 +2440,7 @@ if (monthInput) {
 }
 
 /* ================================================================
-   STAFF ATTENDANCE DETAIL (with working hours)
+   STAFF ATTENDANCE DETAIL
    ================================================================ */
 let currentStaffDetailCode = null;
 let currentStaffDetail = null;
@@ -2160,7 +2583,7 @@ if (staffDetailMonthInput) {
 }
 
 /* ================================================================
-   PRINT SALARY SLIP (with working hours)
+   PRINT SALARY SLIP — PROFESSIONAL LAYOUT
    ================================================================ */
 async function printSalarySlip() {
     if (!currentStaffDetail || !currentStaffDetailCode) {
@@ -2281,33 +2704,33 @@ async function printSalarySlip() {
 
     const rows = attRecords.map(a => {
         const display = new Date(a.date).toLocaleDateString(undefined, {
-            weekday: 'short', day: '2-digit', month: 'short'
+            day: '2-digit', month: 'short', year: 'numeric'
         });
+        const dayName = new Date(a.date).toLocaleDateString(undefined, { weekday: 'short' });
         const s = normalizeStatus(a.status);
-        const checkIn = a.check_in ? new Date(a.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
-        const checkOut = a.check_out ? new Date(a.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+        const checkIn = a.check_in ? new Date(a.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+        const checkOut = a.check_out ? new Date(a.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
         const hrs = calculateWorkingHours(a.check_in, a.check_out);
         const whLabel = hrs !== null ? formatHours(hrs) : '—';
 
-        let statusLabel, statusColor = '#1e293b';
-        if (s === 'present') statusLabel = 'Present';
-        else if (s === 'absent') { statusLabel = 'Absent'; statusColor = '#dc2626'; }
-        else if (s === 'leave') { statusLabel = 'Leave'; statusColor = '#b45309'; }
-        else if (s === 'week_off') { statusLabel = 'Week Off'; statusColor = '#4338ca'; }
-        else statusLabel = a.status;
+        let badgeClass = 'absent', statusLabel = 'Absent';
+        if (s === 'present') { badgeClass = 'present'; statusLabel = 'Present'; }
+        else if (s === 'leave') { badgeClass = 'leave'; statusLabel = 'Leave'; }
+        else if (s === 'week_off') { badgeClass = 'weekoff'; statusLabel = 'Week Off'; }
 
         return `<tr>
-            <td>${display}</td>
-            <td>${checkIn}</td>
-            <td>${checkOut}</td>
-            <td style="color:#1d4ed8;font-weight:600;">${whLabel}</td>
-            <td style="color:${statusColor};font-weight:600;">${statusLabel}</td>
+            <td class="mono">${display}</td>
+            <td>${dayName}</td>
+            <td class="mono">${checkIn}</td>
+            <td class="mono">${checkOut}</td>
+            <td class="center mono">${whLabel}</td>
+            <td class="center"><span class="badge-print ${badgeClass}">${statusLabel}</span></td>
         </tr>`;
     }).join('');
 
-    const printWindow = window.open('', '_blank', 'width=850,height=1050');
+    const printWindow = window.open('', '_blank', 'width=900,height=1000');
     if (!printWindow) {
-        showGlobalStatus('Please allow pop-ups to print the salary slip.', 'error');
+        showGlobalStatus('Please allow pop-ups to print.', 'error');
         return;
     }
 
@@ -2316,216 +2739,169 @@ async function printSalarySlip() {
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Salary Slip · ${currentStaffDetail.name} · ${monthName}</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding: 40px; max-width: 850px; margin: 0 auto; }
-        .header { text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 15px; margin-bottom: 25px; }
-        .header h1 { font-size: 26px; margin-bottom: 5px; color: #1d4ed8; }
-        .header p { font-size: 13px; color: #64748b; margin: 2px 0; }
-        .slip-title { text-align: center; font-size: 18px; font-weight: 600; background: #eff6ff; padding: 10px; border-radius: 8px; margin-bottom: 25px; color: #1d4ed8; letter-spacing: 1px; }
-        .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
-        .meta-block h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 8px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
-        .meta-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; }
-        .meta-row span:first-child { color: #64748b; }
-        .meta-row span:last-child { font-weight: 600; }
-
-        .summary { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 20px; }
-        .summary-box { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 6px; text-align: center; }
-        .summary-box p { font-size: 9px; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
-        .summary-box h2 { font-size: 17px; color: #1e293b; }
-        .summary-box.total { background: #dbeafe; border-color: #93c5fd; }
-        .summary-box.total h2 { color: #1d4ed8; }
-        .summary-box.hours { background: #ede9fe; border-color: #c4b5fd; }
-        .summary-box.hours h2 { color: #6d28d9; }
-
-        .outstanding-section {
-            background: #fef3c7;
-            border: 2px solid #f59e0b;
-            border-radius: 12px;
-            padding: 18px 20px;
-            margin-bottom: 25px;
-        }
-        .outstanding-section h3 {
-            font-size: 13px; color: #92400e; text-transform: uppercase;
-            letter-spacing: 0.5px; margin-bottom: 14px;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .outstanding-grid {
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-        }
-        .outstanding-cell {
-            background: white; border-radius: 8px; padding: 10px 12px;
-            border: 1px solid #fde68a;
-        }
-        .outstanding-cell p { font-size: 10px; color: #92400e; text-transform: uppercase; margin-bottom: 4px; }
-        .outstanding-cell h4 { font-size: 16px; color: #78350f; }
-        .outstanding-cell.paid h4 { color: #15803d; }
-        .outstanding-cell.due h4 { color: #b91c1c; }
-
-        .payable-summary {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
-            margin-bottom: 25px;
-        }
-        .payable-box {
-            border: 1px solid #e5e7eb; border-radius: 10px;
-            padding: 14px; text-align: center;
-        }
-        .payable-box p { font-size: 10px; color: #64748b; text-transform: uppercase; margin-bottom: 6px; }
-        .payable-box h3 { font-size: 18px; color: #1e293b; }
-        .payable-box.grand-total { background: #dbeafe; border-color: #93c5fd; }
-        .payable-box.grand-total h3 { color: #1d4ed8; }
-
-        .final-banner {
-            border-radius: 10px;
-            padding: 16px 20px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .final-banner.pending {
-            background: #fee2e2; border: 2px solid #fca5a5;
-        }
-        .final-banner.pending h2 { color: #b91c1c; }
-        .final-banner.cleared {
-            background: #dcfce7; border: 2px solid #86efac;
-        }
-        .final-banner.cleared h2 { color: #15803d; }
-        .final-banner p {
-            font-size: 12px; font-weight: 600; text-transform: uppercase;
-            letter-spacing: 0.5px; margin-bottom: 4px;
-        }
-        .final-banner.pending p { color: #991b1b; }
-        .final-banner.cleared p { color: #166534; }
-        .final-banner h2 { font-size: 26px; }
-
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 25px; }
-        thead { background: #f8fafc; }
-        th { padding: 10px; text-align: left; color: #64748b; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; }
-        td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
-        tfoot td { padding: 10px; border-top: 2px solid #2563eb; font-weight: 700; background: #f8fafc; }
-        .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 60px; font-size: 12px; }
-        .sig { text-align: center; border-top: 1px solid #1e293b; padding-top: 6px; color: #64748b; }
-        .footer-note { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 40px; font-style: italic; }
-        @media print { body { padding: 20px; } .no-print { display: none; } }
-        .print-actions { text-align: center; margin-bottom: 20px; }
-        .print-actions button { background: #2563eb; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; margin: 0 5px; }
-        .print-actions button.secondary { background: #f1f5f9; color: #334155; }
-    </style>
+    <title>Salary Slip — ${escapeHtml(currentStaffDetail.name)} — ${monthName}</title>
+    <style>${getPrintStyles()}</style>
 </head>
 <body>
     <div class="print-actions no-print">
-        <button onclick="window.print()">🖨️ Print Now</button>
+        <button onclick="window.print()">🖨️ Print Salary Slip</button>
         <button class="secondary" onclick="window.close()">Close</button>
     </div>
 
-    <div class="header">
-        <h1>${company.name || 'StaffPro'}</h1>
-        ${company.address ? `<p>${String(company.address).replace(/\n/g, '<br>')}</p>` : ''}
-        ${company.phone ? `<p>Phone: ${company.phone}</p>` : ''}
-        ${company.email ? `<p>Email: ${company.email}</p>` : ''}
+    ${buildLetterhead(company)}
+
+    <div class="doc-title">
+        <h2>Salary Slip</h2>
+        <p>${monthName}</p>
     </div>
 
-    <div class="slip-title">SALARY SLIP — ${monthName.toUpperCase()}</div>
+    <div class="ref-bar">
+        <div><strong>Staff ID:</strong> ${escapeHtml(currentStaffDetail.staff_id || '—')}</div>
+        <div><strong>Name:</strong> ${escapeHtml(currentStaffDetail.name || '—')}</div>
+        <div><strong>Generated:</strong> ${new Date().toLocaleDateString()}</div>
+    </div>
 
-    <div class="meta">
-        <div class="meta-block">
-            <h3>Employee Details</h3>
-            <div class="meta-row"><span>Staff ID</span><span>${escapeHtml(currentStaffDetail.staff_id || '—')}</span></div>
-            <div class="meta-row"><span>Name</span><span>${escapeHtml(currentStaffDetail.name || '—')}</span></div>
-            <div class="meta-row"><span>Role</span><span>${escapeHtml(currentStaffDetail.role || '—')}</span></div>
-            <div class="meta-row"><span>Department</span><span>${escapeHtml(currentStaffDetail.department || '—')}</span></div>
+    <div class="info-grid-2">
+        <div class="info-panel">
+            <div class="info-panel-title">Employee Details</div>
+            <div class="info-panel-body">
+                <div class="info-row"><span>Staff ID</span><span>${escapeHtml(currentStaffDetail.staff_id || '—')}</span></div>
+                <div class="info-row"><span>Full Name</span><span>${escapeHtml(currentStaffDetail.name || '—')}</span></div>
+                <div class="info-row"><span>Designation</span><span>${escapeHtml(currentStaffDetail.role || '—')}</span></div>
+                <div class="info-row"><span>Department</span><span>${escapeHtml(currentStaffDetail.department || '—')}</span></div>
+            </div>
         </div>
-
-        <div class="meta-block">
-            <h3>Payment Details</h3>
-            <div class="meta-row"><span>Month</span><span>${monthName}</span></div>
-            <div class="meta-row"><span>Daily Rate</span><span>₹${dailyRate.toLocaleString('en-IN')}</span></div>
-            <div class="meta-row"><span>Paid Days</span><span>${paidDays}</span></div>
-            <div class="meta-row"><span>Total Hours</span><span>${formatHours(totalHours)}</span></div>
-        </div>
-    </div>
-
-    <div class="summary">
-        <div class="summary-box"><p>Present</p><h2>${present}</h2></div>
-        <div class="summary-box"><p>Absent</p><h2>${absent}</h2></div>
-        <div class="summary-box"><p>Leave</p><h2>${leave}</h2></div>
-        <div class="summary-box"><p>Week Offs</p><h2>${weekOff}</h2></div>
-        <div class="summary-box hours"><p>Hours</p><h2>${formatHours(totalHours)}</h2></div>
-        <div class="summary-box total"><p>Current Payable</p><h2>₹${currentPayable.toLocaleString('en-IN')}</h2></div>
-    </div>
-
-    <div class="outstanding-section">
-        <h3>⚠️ Outstanding Balance (Carried Forward from ${prevMonthName})</h3>
-        <div class="outstanding-grid">
-            <div class="outstanding-cell">
-                <p>Previous Payable</p>
-                <h4>₹${prevPayable.toLocaleString('en-IN')}</h4>
-            </div>
-            <div class="outstanding-cell paid">
-                <p>Previous Collected</p>
-                <h4>₹${prevCollected.toLocaleString('en-IN')}</h4>
-            </div>
-            <div class="outstanding-cell due">
-                <p>Old Balance Due</p>
-                <h4>₹${oldBalance.toLocaleString('en-IN')}</h4>
-            </div>
-            <div class="outstanding-cell">
-                <p>Previous Att.</p>
-                <h4>${prevPresent}P / ${prevWeekOff}W</h4>
+        <div class="info-panel">
+            <div class="info-panel-title">Payment Details</div>
+            <div class="info-panel-body">
+                <div class="info-row"><span>Pay Period</span><span>${monthName}</span></div>
+                <div class="info-row"><span>Daily Rate</span><span>₹${dailyRate.toLocaleString('en-IN')}</span></div>
+                <div class="info-row"><span>Paid Days</span><span>${paidDays}</span></div>
+                <div class="info-row"><span>Total Hours</span><span>${formatHours(totalHours)}</span></div>
             </div>
         </div>
     </div>
 
-    <div class="payable-summary">
-        <div class="payable-box">
-            <p>Old Balance</p>
-            <h3 style="color:#b45309;">₹${oldBalance.toLocaleString('en-IN')}</h3>
+    <div class="stat-grid">
+        <div class="stat-card success">
+            <div class="label">Present</div>
+            <div class="value">${present}</div>
         </div>
-        <div class="payable-box">
-            <p>Current Payable</p>
-            <h3>₹${currentPayable.toLocaleString('en-IN')}</h3>
+        <div class="stat-card danger">
+            <div class="label">Absent</div>
+            <div class="value">${absent}</div>
         </div>
-        <div class="payable-box grand-total">
-            <p>Total Due</p>
-            <h3>₹${totalDue.toLocaleString('en-IN')}</h3>
+        <div class="stat-card warning">
+            <div class="label">Leave</div>
+            <div class="value">${leave}</div>
+        </div>
+        <div class="stat-card purple">
+            <div class="label">Week Offs</div>
+            <div class="value">${weekOff}</div>
+        </div>
+        <div class="stat-card accent">
+            <div class="label">Total Hours</div>
+            <div class="value">${formatHours(totalHours)}</div>
         </div>
     </div>
 
-    <div class="final-banner ${finalOutstanding > 0 ? 'pending' : 'cleared'}">
+    <div class="section-header">
+        <div class="section-header-icon">↩</div>
+        <h3>Carry Forward Balance (From ${escapeHtml(prevMonthName)})</h3>
+    </div>
+
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card">
+            <div class="label">Previous Payable</div>
+            <div class="value">₹${prevPayable.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="stat-card success">
+            <div class="label">Previously Paid</div>
+            <div class="value">₹${prevCollected.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="label">Old Balance</div>
+            <div class="value">₹${oldBalance.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Prev. Attendance</div>
+            <div class="value">${prevPresent}P / ${prevWeekOff}W</div>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-header-icon">💰</div>
+        <h3>Current Month Computation</h3>
+    </div>
+
+    <div class="financial-highlight">
+        <div class="financial-highlight-header">Salary Summary — ${monthName}</div>
+        <div class="financial-highlight-body">
+            <div class="financial-cell">
+                <div class="flabel">Current Payable</div>
+                <div class="fvalue">₹${currentPayable.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="financial-cell paid">
+                <div class="flabel">Amount Collected</div>
+                <div class="fvalue">₹${currentCollected.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="financial-cell grand">
+                <div class="flabel">Total Due (Old + Current)</div>
+                <div class="fvalue">₹${totalDue.toLocaleString('en-IN')}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="balance-banner ${finalOutstanding > 0 ? 'pending' : 'cleared'}">
         <div>
-            <p>${finalOutstanding > 0 ? '⚠️ Outstanding Amount' : '✅ All Dues Cleared'}</p>
-            ${finalOutstanding > 0
-                ? `<span style="font-size:11px;color:#64748b;">Pending Balance</span>`
-                : `<span style="font-size:11px;color:#64748b;">Total collected: ₹${currentCollected.toLocaleString('en-IN')}</span>`}
+            <div class="label">${finalOutstanding > 0 ? '⚠ Outstanding Balance' : '✓ Account Settled'}</div>
+            <div class="sub">${finalOutstanding > 0
+                ? `Pending balance as on ${new Date().toLocaleDateString()}`
+                : `All dues cleared — Total collected: ₹${currentCollected.toLocaleString('en-IN')}`}</div>
         </div>
-        <h2>₹${finalOutstanding.toLocaleString('en-IN')}</h2>
+        <div class="amount">₹${finalOutstanding.toLocaleString('en-IN')}</div>
     </div>
 
-    <table>
+    <div class="section-header">
+        <div class="section-header-icon">📋</div>
+        <h3>Attendance Register — ${monthName}</h3>
+    </div>
+
+    <table class="data-table">
         <thead>
-            <tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Working Hours</th><th>Status</th></tr>
+            <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th class="center">Hours</th>
+                <th class="center">Status</th>
+            </tr>
         </thead>
         <tbody>${rows}</tbody>
         <tfoot>
             <tr>
-                <td colspan="3" style="text-align:right;">
-                    Total Payable (${present} Present + ${weekOff} Week Offs = ${paidDays} days × ₹${dailyRate.toLocaleString('en-IN')})
-                </td>
-                <td style="color:#1d4ed8;">${formatHours(totalHours)}</td>
-                <td>₹${currentPayable.toLocaleString('en-IN')}</td>
+                <td colspan="4" style="text-align:right;">Payable Days: ${paidDays} (${present}P + ${weekOff}WO) × ₹${dailyRate.toLocaleString('en-IN')} =</td>
+                <td class="center">${formatHours(totalHours)}</td>
+                <td class="center">₹${currentPayable.toLocaleString('en-IN')}</td>
             </tr>
         </tfoot>
     </table>
 
     <div class="signatures">
-        <div class="sig">Employee Signature</div>
-        <div class="sig">Authorized Signatory</div>
+        <div class="sig-block">
+            <div class="sig-name">${escapeHtml(currentStaffDetail.name || 'Employee')}</div>
+            <div class="sig-role">Employee Signature</div>
+        </div>
+        <div class="sig-block">
+            <div class="sig-name">Authorized Signatory</div>
+            <div class="sig-role">For ${escapeHtml(company.name || 'StaffPro')}</div>
+        </div>
     </div>
 
-    <div class="footer-note">
-        This is a computer-generated salary slip. Generated on ${new Date().toLocaleDateString()}.
+    <div class="doc-footer">
+        This is a computer-generated salary slip issued by <strong>${escapeHtml(company.name || 'StaffPro')}</strong>.
+        Generated on ${new Date().toLocaleString()}.
     </div>
 </body>
 </html>
@@ -2535,15 +2911,13 @@ async function printSalarySlip() {
 }
 
 /* ================================================================
-   PRINT HR DEPARTMENT REPORT (NEW)
+   PRINT HR DEPARTMENT REPORT — PROFESSIONAL LAYOUT
    ================================================================ */
 async function printHRReport() {
-    // Determine which month to use
     let monthValue;
     if (attendanceView === 'month') {
         monthValue = document.getElementById('attendanceMonth').value;
     } else {
-        // Default to current month if in day view
         const now = new Date();
         monthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     }
@@ -2557,7 +2931,6 @@ async function printHRReport() {
     const monthName = new Date(year, month - 1, 1)
         .toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
-    // Fetch company info
     let company = { name: 'StaffPro', address: '', phone: '', email: '' };
     try {
         const { data } = await _supabase
@@ -2575,14 +2948,12 @@ async function printHRReport() {
     showGlobalStatus('Generating HR report…', 'info');
 
     try {
-        // 1. Fetch all staff
         const { data: staffData, error: staffErr } = await _supabase
             .from('staff')
             .select('staff_id, name, role, department, daily_rate, joined_date')
             .order('staff_id', { ascending: true });
         if (staffErr) throw staffErr;
 
-        // 2. Fetch attendance for this month
         const { data: attData, error: attErr } = await _supabase
             .from('attendance')
             .select('staff_id, date, status, check_in, check_out')
@@ -2591,21 +2962,16 @@ async function printHRReport() {
             .order('date', { ascending: true });
         if (attErr) throw attErr;
 
-        // 3. Fetch salary collections for this month
         const { data: collData, error: collErr } = await _supabase
             .from('salary_collections')
             .select('*')
             .eq('salary_month', monthValue);
         if (collErr) {
-            if (collErr.code === '42P01') {
-                console.warn('salary_collections table missing.');
-            } else {
-                throw collErr;
-            }
+            if (collErr.code === '42P01') console.warn('salary_collections table missing.');
+            else throw collErr;
         }
         const collections = collData || [];
 
-        // 4. Build per-staff summary
         const summary = {};
         (staffData || []).forEach(s => {
             summary[s.staff_id] = {
@@ -2615,18 +2981,12 @@ async function printHRReport() {
                 department: s.department || '—',
                 daily_rate: Number(s.daily_rate || 0),
                 joined_date: s.joined_date || '—',
-                present: 0,
-                absent: 0,
-                leave: 0,
-                week_off: 0,
-                totalRecords: 0,
-                totalHours: 0,
-                collected: 0,
-                payments: 0,
+                present: 0, absent: 0, leave: 0, week_off: 0,
+                totalRecords: 0, totalHours: 0,
+                collected: 0, payments: 0,
             };
         });
 
-        // Process attendance
         (attData || []).forEach(a => {
             const s = summary[a.staff_id];
             if (!s) return;
@@ -2640,7 +3000,6 @@ async function printHRReport() {
             if (hrs !== null) s.totalHours += hrs;
         });
 
-        // Process salary collections
         collections.forEach(c => {
             const s = summary[c.staff_id];
             if (!s) return;
@@ -2648,13 +3007,11 @@ async function printHRReport() {
             s.payments++;
         });
 
-        // Compute payable & balance
         Object.values(summary).forEach(s => {
             s.payable = (s.present + s.week_off) * s.daily_rate;
             s.balance = Math.max(0, s.payable - s.collected);
         });
 
-        // Totals
         const totalStaff = Object.keys(summary).length;
         const totalPresent = Object.values(summary).reduce((a, s) => a + s.present, 0);
         const totalAbsent = Object.values(summary).reduce((a, s) => a + s.absent, 0);
@@ -2665,32 +3022,33 @@ async function printHRReport() {
         const totalCollected = Object.values(summary).reduce((a, s) => a + s.collected, 0);
         const totalOutstanding = Object.values(summary).reduce((a, s) => a + s.balance, 0);
 
-        // Build rows
+        const attendanceBase = totalPresent + totalAbsent + totalLeave;
+        const attendancePct = attendanceBase > 0
+            ? ((totalPresent / attendanceBase) * 100).toFixed(1)
+            : '0.0';
+
         const rows = Object.values(summary).map(s => {
-            const attRate = s.totalRecords > 0
-                ? ((s.present / (s.present + s.absent + s.leave)) * 100).toFixed(1)
-                : '0.0';
             return `<tr>
-                <td><strong>${escapeHtml(s.staff_id)}</strong></td>
+                <td class="mono">${escapeHtml(s.staff_id)}</td>
                 <td>${escapeHtml(s.name)}</td>
                 <td>${escapeHtml(s.role)}</td>
                 <td>${escapeHtml(s.department)}</td>
-                <td style="text-align:center;">${s.present}</td>
-                <td style="text-align:center;">${s.absent}</td>
-                <td style="text-align:center;">${s.leave}</td>
-                <td style="text-align:center;">${s.week_off}</td>
-                <td style="text-align:center;color:#1d4ed8;font-weight:600;">${formatHours(s.totalHours)}</td>
-                <td style="text-align:right;">₹${s.payable.toLocaleString('en-IN')}</td>
-                <td style="text-align:right;color:#16a34a;font-weight:600;">₹${s.collected.toLocaleString('en-IN')}</td>
-                <td style="text-align:right;color:${s.balance > 0 ? '#dc2626' : '#16a34a'};font-weight:700;">
-                    ${s.balance > 0 ? '₹' + s.balance.toLocaleString('en-IN') : '✅ Paid'}
+                <td class="center">${s.present}</td>
+                <td class="center">${s.absent}</td>
+                <td class="center">${s.leave}</td>
+                <td class="center">${s.week_off}</td>
+                <td class="center mono">${formatHours(s.totalHours)}</td>
+                <td class="right mono">₹${s.payable.toLocaleString('en-IN')}</td>
+                <td class="right mono">₹${s.collected.toLocaleString('en-IN')}</td>
+                <td class="right mono" style="color:${s.balance > 0 ? '#b91c1c' : '#15803d'};font-weight:700;">
+                    ${s.balance > 0 ? '₹' + s.balance.toLocaleString('en-IN') : '✓ Paid'}
                 </td>
             </tr>`;
         }).join('');
 
         const printWindow = window.open('', '_blank', 'width=1200,height=1000');
         if (!printWindow) {
-            showGlobalStatus('Please allow pop-ups to print the HR report.', 'error');
+            showGlobalStatus('Please allow pop-ups to print.', 'error');
             return;
         }
 
@@ -2699,248 +3057,133 @@ async function printHRReport() {
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>HR Department Report · ${monthName}</title>
-    <style>
-        * { box-sizing: border-box; }
-        @page { size: A4 landscape; margin: 15mm; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding: 20px; max-width: 1400px; margin: 0 auto; }
-        .header { text-align: center; border-bottom: 3px solid #7c3aed; padding-bottom: 15px; margin-bottom: 20px; }
-        .header h1 { font-size: 26px; margin-bottom: 5px; color: #6d28d9; }
-        .header p { font-size: 13px; color: #64748b; margin: 2px 0; }
-
-        .report-title {
-            text-align: center; font-size: 20px; font-weight: 700;
-            background: linear-gradient(135deg, #ede9fe, #dbeafe);
-            padding: 14px; border-radius: 8px;
-            margin-bottom: 22px; color: #5b21b6; letter-spacing: 1.5px;
-            border: 2px solid #c4b5fd;
-        }
-
-        .meta-bar {
-            display: flex; justify-content: space-between; align-items: center;
-            background: #f8fafc; border: 1px solid #e5e7eb;
-            border-radius: 10px; padding: 12px 18px;
-            margin-bottom: 20px; font-size: 13px;
-        }
-        .meta-bar strong { color: #1e293b; }
-        .meta-bar span { color: #64748b; }
-
-        /* Summary boxes */
-        .summary-grid {
-            display: grid; grid-template-columns: repeat(6, 1fr);
-            gap: 12px; margin-bottom: 22px;
-        }
-        .summary-box {
-            border-radius: 10px; padding: 14px 10px;
-            text-align: center; border: 1px solid #e5e7eb;
-            background: white;
-        }
-        .summary-box p {
-            font-size: 10px; color: #64748b;
-            text-transform: uppercase; margin-bottom: 6px;
-            letter-spacing: 0.5px;
-        }
-        .summary-box h2 { font-size: 22px; color: #1e293b; }
-        .summary-box.blue { background: #dbeafe; border-color: #93c5fd; }
-        .summary-box.blue h2 { color: #1d4ed8; }
-        .summary-box.green { background: #dcfce7; border-color: #86efac; }
-        .summary-box.green h2 { color: #15803d; }
-        .summary-box.orange { background: #fef3c7; border-color: #fcd34d; }
-        .summary-box.orange h2 { color: #b45309; }
-        .summary-box.red { background: #fee2e2; border-color: #fca5a5; }
-        .summary-box.red h2 { color: #b91c1c; }
-        .summary-box.purple { background: #ede9fe; border-color: #c4b5fd; }
-        .summary-box.purple h2 { color: #6d28d9; }
-        .summary-box.teal { background: #ccfbf1; border-color: #5eead4; }
-        .summary-box.teal h2 { color: #0f766e; }
-
-        /* Section title */
-        .section-title {
-            font-size: 14px; font-weight: 700; color: #1e293b;
-            margin-bottom: 12px; padding-bottom: 6px;
-            border-bottom: 2px solid #e5e7eb;
-            display: flex; align-items: center; gap: 8px;
-        }
-
-        /* Main table */
-        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 25px; }
-        thead { background: #1e293b; }
-        th {
-            padding: 10px 8px; text-align: left; color: white;
-            font-size: 10px; text-transform: uppercase;
-            letter-spacing: 0.5px; font-weight: 600;
-            border-bottom: 2px solid #0f172a;
-        }
-        td { padding: 9px 8px; border-bottom: 1px solid #f1f5f9; }
-        tbody tr:nth-child(even) { background: #fafbfc; }
-        tbody tr:hover { background: #f8fafc; }
-        tfoot td {
-            padding: 12px 8px; border-top: 2px solid #7c3aed;
-            font-weight: 700; background: #f3f4f6;
-            color: #1e293b;
-        }
-
-        .dept-summary {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px; margin-bottom: 25px;
-        }
-        .dept-card {
-            border: 1px solid #e5e7eb; border-radius: 10px;
-            padding: 14px; background: white;
-        }
-        .dept-card h4 {
-            font-size: 12px; color: #1e293b; margin-bottom: 8px;
-            text-transform: uppercase; letter-spacing: 0.5px;
-            padding-bottom: 6px; border-bottom: 1px solid #f1f5f9;
-        }
-        .dept-card .row {
-            display: flex; justify-content: space-between;
-            font-size: 11px; padding: 3px 0;
-        }
-        .dept-card .row span:first-child { color: #64748b; }
-        .dept-card .row span:last-child { font-weight: 600; }
-
-        .signatures {
-            display: grid; grid-template-columns: 1fr 1fr;
-            gap: 80px; margin-top: 60px; font-size: 12px;
-        }
-        .sig {
-            text-align: center; border-top: 1px solid #1e293b;
-            padding-top: 6px; color: #64748b;
-        }
-        .footer-note {
-            text-align: center; font-size: 11px; color: #94a3b8;
-            margin-top: 40px; font-style: italic;
-        }
-
-        @media print {
-            body { padding: 10px; }
-            .no-print { display: none; }
-        }
-        .print-actions { text-align: center; margin-bottom: 20px; }
-        .print-actions button {
-            background: #7c3aed; color: white; border: none;
-            padding: 10px 24px; border-radius: 8px; font-size: 14px;
-            cursor: pointer; margin: 0 5px;
-        }
-        .print-actions button.secondary { background: #f1f5f9; color: #334155; }
+    <title>HR Department Report — ${monthName}</title>
+    <style>${getPrintStyles()}
+        @page { size: A4 landscape; margin: 12mm; }
+        body { max-width: 1400px; }
+        table.data-table { font-size: 10px; }
+        table.data-table th { font-size: 9px; padding: 8px 6px; }
+        table.data-table td { padding: 7px 6px; font-size: 10px; }
     </style>
 </head>
 <body>
     <div class="print-actions no-print">
-        <button onclick="window.print()">🖨️ Print Report</button>
+        <button onclick="window.print()">🖨️ Print HR Report</button>
         <button class="secondary" onclick="window.close()">Close</button>
     </div>
 
-    <div class="header">
-        <h1>${company.name || 'StaffPro'}</h1>
-        ${company.address ? `<p>${String(company.address).replace(/\n/g, '<br>')}</p>` : ''}
-        ${company.phone ? `<p>Phone: ${company.phone}</p>` : ''}
-        ${company.email ? `<p>Email: ${company.email}</p>` : ''}
+    ${buildLetterhead(company)}
+
+    <div class="doc-title">
+        <h2>HR Department Report</h2>
+        <p>Monthly Staff Attendance & Payroll Summary — ${monthName}</p>
     </div>
 
-    <div class="report-title">📋 HR DEPARTMENT REPORT — ${monthName.toUpperCase()}</div>
+    <div class="ref-bar">
+        <div><strong>Report Period:</strong> ${new Date(firstDay).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })} — ${new Date(lastDay).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+        <div><strong>Total Staff:</strong> ${totalStaff} &nbsp;|&nbsp; <strong>Payment Records:</strong> ${collections.length}</div>
+        <div><strong>Generated:</strong> ${new Date().toLocaleString()}</div>
+    </div>
 
-    <div class="meta-bar">
+    <div class="section-header">
+        <div class="section-header-icon">📊</div>
+        <h3>Attendance Overview</h3>
+    </div>
+
+    <div class="stat-grid" style="grid-template-columns:repeat(6,1fr);">
+        <div class="stat-card accent">
+            <div class="label">Total Staff</div>
+            <div class="value">${totalStaff}</div>
+        </div>
+        <div class="stat-card success">
+            <div class="label">Present Days</div>
+            <div class="value">${totalPresent}</div>
+        </div>
+        <div class="stat-card danger">
+            <div class="label">Absent Days</div>
+            <div class="value">${totalAbsent}</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="label">Leave Days</div>
+            <div class="value">${totalLeave}</div>
+        </div>
+        <div class="stat-card purple">
+            <div class="label">Week Offs</div>
+            <div class="value">${totalWeekOff}</div>
+        </div>
+        <div class="stat-card accent">
+            <div class="label">Attendance %</div>
+            <div class="value">${attendancePct}%</div>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-header-icon">💰</div>
+        <h3>Payroll Summary</h3>
+    </div>
+
+    <div class="financial-highlight">
+        <div class="financial-highlight-header">Financial Overview — ${monthName}</div>
+        <div class="financial-highlight-body">
+            <div class="financial-cell">
+                <div class="flabel">Total Hours Worked</div>
+                <div class="fvalue">${formatHours(totalHoursAll)}</div>
+            </div>
+            <div class="financial-cell grand">
+                <div class="flabel">Total Payable</div>
+                <div class="fvalue">₹${totalPayable.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="financial-cell paid">
+                <div class="flabel">Total Collected</div>
+                <div class="fvalue">₹${totalCollected.toLocaleString('en-IN')}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="balance-banner ${totalOutstanding > 0 ? 'pending' : 'cleared'}">
         <div>
-            <strong>Report Period:</strong>
-            <span>${new Date(firstDay).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })} to ${new Date(lastDay).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+            <div class="label">${totalOutstanding > 0 ? '⚠ Outstanding Payroll Balance' : '✓ Payroll Fully Settled'}</div>
+            <div class="sub">${totalOutstanding > 0
+                ? `Pending amount across ${Object.values(summary).filter(s => s.balance > 0).length} staff member(s)`
+                : `All salary dues have been cleared for ${monthName}`}</div>
         </div>
-        <div>
-            <strong>Generated:</strong>
-            <span>${new Date().toLocaleString()}</span>
-        </div>
+        <div class="amount">₹${totalOutstanding.toLocaleString('en-IN')}</div>
     </div>
 
-    <div class="section-title">📊 Monthly Overview</div>
-
-    <div class="summary-grid">
-        <div class="summary-box blue">
-            <p>Total Staff</p>
-            <h2>${totalStaff}</h2>
-        </div>
-        <div class="summary-box green">
-            <p>Present Days</p>
-            <h2>${totalPresent}</h2>
-        </div>
-        <div class="summary-box red">
-            <p>Absent Days</p>
-            <h2>${totalAbsent}</h2>
-        </div>
-        <div class="summary-box orange">
-            <p>Leave Days</p>
-            <h2>${totalLeave}</h2>
-        </div>
-        <div class="summary-box purple">
-            <p>Total Hours</p>
-            <h2>${formatHours(totalHoursAll)}</h2>
-        </div>
-        <div class="summary-box teal">
-            <p>Week Offs</p>
-            <h2>${totalWeekOff}</h2>
-        </div>
+    <div class="section-header">
+        <div class="section-header-icon">👥</div>
+        <h3>Per-Staff Consolidated Report</h3>
     </div>
 
-    <div class="summary-grid">
-        <div class="summary-box blue">
-            <p>Total Payable</p>
-            <h2>₹${totalPayable.toLocaleString('en-IN')}</h2>
-        </div>
-        <div class="summary-box green">
-            <p>Total Collected</p>
-            <h2>₹${totalCollected.toLocaleString('en-IN')}</h2>
-        </div>
-        <div class="summary-box red">
-            <p>Outstanding</p>
-            <h2>₹${totalOutstanding.toLocaleString('en-IN')}</h2>
-        </div>
-        <div class="summary-box purple">
-            <p>Avg Hours / Staff</p>
-            <h2>${totalStaff > 0 ? formatHours(totalHoursAll / totalStaff) : '—'}</h2>
-        </div>
-        <div class="summary-box teal">
-            <p>Payment Records</p>
-            <h2>${collections.length}</h2>
-        </div>
-        <div class="summary-box orange">
-            <p>Attendance %</p>
-            <h2>${(totalPresent + totalAbsent + totalLeave) > 0
-                ? ((totalPresent / (totalPresent + totalAbsent + totalLeave)) * 100).toFixed(1) + '%'
-                : '—'}</h2>
-        </div>
-    </div>
-
-    <div class="section-title">👥 Per-Staff Details</div>
-
-    <table>
+    <table class="data-table">
         <thead>
             <tr>
                 <th>Staff ID</th>
-                <th>Name</th>
+                <th>Employee Name</th>
                 <th>Role</th>
                 <th>Department</th>
-                <th style="text-align:center;">Present</th>
-                <th style="text-align:center;">Absent</th>
-                <th style="text-align:center;">Leave</th>
-                <th style="text-align:center;">Wk Off</th>
-                <th style="text-align:center;">Hours</th>
-                <th style="text-align:right;">Payable</th>
-                <th style="text-align:right;">Collected</th>
-                <th style="text-align:right;">Balance</th>
+                <th class="center">Present</th>
+                <th class="center">Absent</th>
+                <th class="center">Leave</th>
+                <th class="center">Wk Off</th>
+                <th class="center">Hours</th>
+                <th class="right">Payable</th>
+                <th class="right">Collected</th>
+                <th class="right">Balance</th>
             </tr>
         </thead>
         <tbody>${rows || '<tr><td colspan="12" style="text-align:center;color:#94a3b8;padding:20px;">No staff data available.</td></tr>'}</tbody>
         <tfoot>
             <tr>
-                <td colspan="4" style="text-align:right;">TOTALS:</td>
-                <td style="text-align:center;">${totalPresent}</td>
-                <td style="text-align:center;">${totalAbsent}</td>
-                <td style="text-align:center;">${totalLeave}</td>
-                <td style="text-align:center;">${totalWeekOff}</td>
-                <td style="text-align:center;color:#6d28d9;">${formatHours(totalHoursAll)}</td>
-                <td style="text-align:right;color:#1d4ed8;">₹${totalPayable.toLocaleString('en-IN')}</td>
-                <td style="text-align:right;color:#15803d;">₹${totalCollected.toLocaleString('en-IN')}</td>
-                <td style="text-align:right;color:${totalOutstanding > 0 ? '#b91c1c' : '#15803d'};">
+                <td colspan="4" style="text-align:right;">GRAND TOTALS:</td>
+                <td class="center">${totalPresent}</td>
+                <td class="center">${totalAbsent}</td>
+                <td class="center">${totalLeave}</td>
+                <td class="center">${totalWeekOff}</td>
+                <td class="center">${formatHours(totalHoursAll)}</td>
+                <td class="right">₹${totalPayable.toLocaleString('en-IN')}</td>
+                <td class="right" style="color:#15803d;">₹${totalCollected.toLocaleString('en-IN')}</td>
+                <td class="right" style="color:${totalOutstanding > 0 ? '#b91c1c' : '#15803d'};">
                     ₹${totalOutstanding.toLocaleString('en-IN')}
                 </td>
             </tr>
@@ -2948,13 +3191,19 @@ async function printHRReport() {
     </table>
 
     <div class="signatures">
-        <div class="sig">HR Manager Signature</div>
-        <div class="sig">Authorized Signatory</div>
+        <div class="sig-block">
+            <div class="sig-name">HR Manager</div>
+            <div class="sig-role">Human Resources Department</div>
+        </div>
+        <div class="sig-block">
+            <div class="sig-name">Authorized Signatory</div>
+            <div class="sig-role">For ${escapeHtml(company.name || 'StaffPro')}</div>
+        </div>
     </div>
 
-    <div class="footer-note">
-        This is a computer-generated HR Department Report.
-        Generated on ${new Date().toLocaleString()} by KCST Staff Pro.
+    <div class="doc-footer">
+        This is a computer-generated HR Department Report issued by <strong>${escapeHtml(company.name || 'StaffPro')}</strong>.
+        Confidential — For internal use only. Generated on ${new Date().toLocaleString()}.
     </div>
 </body>
 </html>
@@ -3149,7 +3398,7 @@ async function saveNewStaff() {
 }
 
 /* ================================================================
-   MARK ATTENDANCE (with live working hours preview)
+   MARK ATTENDANCE
    ================================================================ */
 async function markAttendance() {
     const today = new Date().toISOString().split('T')[0];
@@ -3452,7 +3701,7 @@ function backupData() {
 }
 
 /* ================================================================
-   SALARY COLLECTION — WITH EDIT, DELETE & PRINT
+   SALARY COLLECTION
    ================================================================ */
 
 let currentSalaryMonth = '';
@@ -3829,7 +4078,7 @@ async function saveSalaryCollection() {
 }
 
 /* ================================================================
-   SALARY HISTORY MODAL — with Edit, Delete & Print
+   SALARY HISTORY MODAL
    ================================================================ */
 async function openSalaryHistoryModal(staffId) {
     const staff = salaryData.find(s => s.staff_id === staffId);
@@ -3973,7 +4222,7 @@ async function confirmDeleteSalary() {
 }
 
 /* ================================================================
-   PRINT SALARY STATEMENT (History Modal → includes old balance)
+   PRINT SALARY STATEMENT — PROFESSIONAL LAYOUT
    ================================================================ */
 async function printSalaryStatement() {
     const staffCode = document.getElementById('historyStaffName').dataset.staffCode;
@@ -4072,18 +4321,18 @@ async function printSalaryStatement() {
                 })
                 : '—';
             return `<tr>
-                <td>${displayDate}</td>
-                <td>${escapeHtml(c.collected_time || '—')}</td>
-                <td style="font-weight:600;color:#16a34a;">₹${Number(c.amount).toLocaleString('en-IN')}</td>
+                <td class="mono">${displayDate}</td>
+                <td class="mono">${escapeHtml(c.collected_time || '—')}</td>
+                <td class="right mono" style="font-weight:700;color:#15803d;">₹${Number(c.amount).toLocaleString('en-IN')}</td>
                 <td>${escapeHtml(c.paid_by || '—')}</td>
-                <td style="color:#64748b;font-size:11px;">${escapeHtml(c.notes || '—')}</td>
+                <td style="color:#64748b;font-size:10px;">${escapeHtml(c.notes || '—')}</td>
             </tr>`;
         }).join('')
         : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">No payments recorded for this month.</td></tr>';
 
-    const printWindow = window.open('', '_blank', 'width=850,height=1000');
+    const printWindow = window.open('', '_blank', 'width=900,height=1000');
     if (!printWindow) {
-        showGlobalStatus('Please allow pop-ups to print the statement.', 'error');
+        showGlobalStatus('Please allow pop-ups to print.', 'error');
         return;
     }
 
@@ -4092,180 +4341,117 @@ async function printSalaryStatement() {
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Salary Statement · ${staff.name} · ${monthName}</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b; padding: 40px; max-width: 900px; margin: 0 auto; }
-        .header { text-align: center; border-bottom: 3px solid #7c3aed; padding-bottom: 15px; margin-bottom: 25px; }
-        .header h1 { font-size: 26px; margin-bottom: 5px; color: #6d28d9; }
-        .header p { font-size: 13px; color: #64748b; margin: 2px 0; }
-        .slip-title {
-            text-align: center; font-size: 18px; font-weight: 600;
-            background: #ede9fe; padding: 12px; border-radius: 8px;
-            margin-bottom: 25px; color: #6d28d9; letter-spacing: 1px;
-        }
-        .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
-        .meta-block h3 {
-            font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
-            color: #64748b; margin-bottom: 8px; border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 5px;
-        }
-        .meta-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; }
-        .meta-row span:first-child { color: #64748b; }
-        .meta-row span:last-child { font-weight: 600; }
-
-        .balance-section {
-            background: #fef3c7; border: 1px solid #fcd34d;
-            border-radius: 12px; padding: 18px; margin-bottom: 22px;
-        }
-        .balance-section h3 {
-            font-size: 13px; color: #92400e; text-transform: uppercase;
-            letter-spacing: 0.5px; margin-bottom: 12px;
-        }
-        .balance-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
-        }
-        .balance-cell {
-            background: white; border-radius: 8px; padding: 10px 14px;
-            border: 1px solid #fde68a;
-        }
-        .balance-cell p { font-size: 10px; color: #92400e; text-transform: uppercase; margin-bottom: 4px; }
-        .balance-cell h4 { font-size: 18px; color: #78350f; }
-
-        .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 25px; }
-        .summary-box {
-            border: 1px solid #e5e7eb; border-radius: 10px;
-            padding: 14px 10px; text-align: center;
-        }
-        .summary-box p { font-size: 10px; color: #64748b; margin-bottom: 5px; text-transform: uppercase; }
-        .summary-box h2 { font-size: 20px; color: #1e293b; }
-        .summary-box.total { background: #ede9fe; border-color: #c4b5fd; }
-        .summary-box.total h2 { color: #6d28d9; }
-        .summary-box.balance-box { background: #fee2e2; border-color: #fca5a5; }
-        .summary-box.balance-box h2 { color: #b91c1c; }
-        .summary-box.paid-box { background: #dcfce7; border-color: #86efac; }
-        .summary-box.paid-box h2 { color: #15803d; }
-
-        .section-title {
-            font-size: 14px; font-weight: 700; color: #1e293b;
-            margin-bottom: 12px; padding-bottom: 6px;
-            border-bottom: 2px solid #e5e7eb;
-            display: flex; align-items: center; gap: 8px;
-        }
-
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 25px; }
-        thead { background: #f8fafc; }
-        th {
-            padding: 10px; text-align: left; color: #64748b;
-            font-size: 11px; text-transform: uppercase;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        td { padding: 10px; border-bottom: 1px solid #f1f5f9; }
-        tfoot td {
-            padding: 12px; border-top: 2px solid #7c3aed;
-            font-weight: 700; background: #f8fafc;
-        }
-
-        .signatures {
-            display: grid; grid-template-columns: 1fr 1fr;
-            gap: 60px; margin-top: 60px; font-size: 12px;
-        }
-        .sig {
-            text-align: center; border-top: 1px solid #1e293b;
-            padding-top: 6px; color: #64748b;
-        }
-        .footer-note {
-            text-align: center; font-size: 11px; color: #94a3b8;
-            margin-top: 40px; font-style: italic;
-        }
-        @media print { body { padding: 20px; } .no-print { display: none; } }
-        .print-actions { text-align: center; margin-bottom: 20px; }
-        .print-actions button {
-            background: #7c3aed; color: white; border: none;
-            padding: 10px 24px; border-radius: 8px; font-size: 14px;
-            cursor: pointer; margin: 0 5px;
-        }
-        .print-actions button.secondary { background: #f1f5f9; color: #334155; }
-    </style>
+    <title>Salary Statement — ${escapeHtml(staff.name)} — ${monthName}</title>
+    <style>${getPrintStyles()}</style>
 </head>
 <body>
     <div class="print-actions no-print">
-        <button onclick="window.print()">🖨️ Print Now</button>
+        <button onclick="window.print()">🖨️ Print Statement</button>
         <button class="secondary" onclick="window.close()">Close</button>
     </div>
 
-    <div class="header">
-        <h1>${company.name || 'StaffPro'}</h1>
-        ${company.address ? `<p>${String(company.address).replace(/\n/g, '<br>')}</p>` : ''}
-        ${company.phone ? `<p>Phone: ${company.phone}</p>` : ''}
-        ${company.email ? `<p>Email: ${company.email}</p>` : ''}
+    ${buildLetterhead(company)}
+
+    <div class="doc-title">
+        <h2>Salary Statement</h2>
+        <p>Consolidated Payment Record — ${monthName}</p>
     </div>
 
-    <div class="slip-title">SALARY STATEMENT — ${monthName.toUpperCase()}</div>
-
-    <div class="meta">
-        <div class="meta-block">
-            <h3>Employee Details</h3>
-            <div class="meta-row"><span>Staff ID</span><span>${escapeHtml(staff.staff_id)}</span></div>
-            <div class="meta-row"><span>Name</span><span>${escapeHtml(staff.name)}</span></div>
-            <div class="meta-row"><span>Role</span><span>${escapeHtml(staff.role || '—')}</span></div>
-            <div class="meta-row"><span>Department</span><span>${escapeHtml(staff.department || '—')}</span></div>
-        </div>
-
-        <div class="meta-block">
-            <h3>Payment Settings</h3>
-            <div class="meta-row"><span>Month</span><span>${monthName}</span></div>
-            <div class="meta-row"><span>Daily Rate</span><span>₹${dailyRate.toLocaleString('en-IN')}</span></div>
-            <div class="meta-row"><span>Present Days</span><span>${staff.present}</span></div>
-            <div class="meta-row"><span>Week Offs</span><span>${staff.week_off}</span></div>
-        </div>
+    <div class="ref-bar">
+        <div><strong>Staff ID:</strong> ${escapeHtml(staff.staff_id)}</div>
+        <div><strong>Name:</strong> ${escapeHtml(staff.name)}</div>
+        <div><strong>Generated:</strong> ${new Date().toLocaleString()}</div>
     </div>
 
-    <div class="balance-section">
-        <h3>↩️ Old Balance (Carried Forward from ${prevMonthName})</h3>
-        <div class="balance-grid">
-            <div class="balance-cell">
-                <p>${prevPresent} Present + ${prevWeekOff} Week Off</p>
-                <h4>₹${prevPayable.toLocaleString('en-IN')}</h4>
+    <div class="info-grid-2">
+        <div class="info-panel">
+            <div class="info-panel-title">Employee Information</div>
+            <div class="info-panel-body">
+                <div class="info-row"><span>Staff ID</span><span>${escapeHtml(staff.staff_id)}</span></div>
+                <div class="info-row"><span>Name</span><span>${escapeHtml(staff.name)}</span></div>
+                <div class="info-row"><span>Designation</span><span>${escapeHtml(staff.role || '—')}</span></div>
+                <div class="info-row"><span>Department</span><span>${escapeHtml(staff.department || '—')}</span></div>
             </div>
-            <div class="balance-cell">
-                <p>Previously Collected</p>
-                <h4 style="color:#15803d;">₹${prevCollected.toLocaleString('en-IN')}</h4>
-            </div>
-            <div class="balance-cell" style="background:#fef3c7;">
-                <p style="font-weight:700;">Old Balance Carried</p>
-                <h4 style="color:#b45309;">₹${oldBalance.toLocaleString('en-IN')}</h4>
+        </div>
+        <div class="info-panel">
+            <div class="info-panel-title">Payroll Details</div>
+            <div class="info-panel-body">
+                <div class="info-row"><span>Statement Period</span><span>${monthName}</span></div>
+                <div class="info-row"><span>Daily Rate</span><span>₹${dailyRate.toLocaleString('en-IN')}</span></div>
+                <div class="info-row"><span>Present Days</span><span>${staff.present}</span></div>
+                <div class="info-row"><span>Week Offs</span><span>${staff.week_off}</span></div>
             </div>
         </div>
     </div>
 
-    <div class="summary">
-        <div class="summary-box">
-            <p>Old Balance</p>
-            <h2 style="color:#b45309;">₹${oldBalance.toLocaleString('en-IN')}</h2>
+    <div class="section-header">
+        <div class="section-header-icon">↩</div>
+        <h3>Carry Forward — From ${escapeHtml(prevMonthName)}</h3>
+    </div>
+
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card">
+            <div class="label">Prev. Payable</div>
+            <div class="value">₹${prevPayable.toLocaleString('en-IN')}</div>
         </div>
-        <div class="summary-box">
-            <p>Current Payable</p>
-            <h2>₹${currentPayable.toLocaleString('en-IN')}</h2>
+        <div class="stat-card success">
+            <div class="label">Prev. Collected</div>
+            <div class="value">₹${prevCollected.toLocaleString('en-IN')}</div>
         </div>
-        <div class="summary-box total">
-            <p>Total Due</p>
-            <h2>₹${totalDue.toLocaleString('en-IN')}</h2>
+        <div class="stat-card warning">
+            <div class="label">Old Balance</div>
+            <div class="value">₹${oldBalance.toLocaleString('en-IN')}</div>
         </div>
-        <div class="summary-box paid-box">
-            <p>Total Collected</p>
-            <h2>₹${currentCollected.toLocaleString('en-IN')}</h2>
+        <div class="stat-card">
+            <div class="label">Prev. Attendance</div>
+            <div class="value">${prevPresent}P / ${prevWeekOff}W</div>
         </div>
     </div>
 
-    <div class="section-title">💰 Payment History — ${monthName}</div>
+    <div class="section-header">
+        <div class="section-header-icon">💰</div>
+        <h3>Payment Summary — ${monthName}</h3>
+    </div>
 
-    <table>
+    <div class="financial-highlight">
+        <div class="financial-highlight-header">Financial Consolidation</div>
+        <div class="financial-highlight-body">
+            <div class="financial-cell">
+                <div class="flabel">Current Payable</div>
+                <div class="fvalue">₹${currentPayable.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="financial-cell paid">
+                <div class="flabel">Amount Collected</div>
+                <div class="fvalue">₹${currentCollected.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="financial-cell grand">
+                <div class="flabel">Total Due</div>
+                <div class="fvalue">₹${totalDue.toLocaleString('en-IN')}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="balance-banner ${finalBalance > 0 ? 'pending' : 'cleared'}">
+        <div>
+            <div class="label">${finalBalance > 0 ? '⚠ Outstanding Balance' : '✓ Account Fully Settled'}</div>
+            <div class="sub">${finalBalance > 0
+                ? `Pending balance carried forward from previous periods`
+                : `All salary dues cleared as on ${new Date().toLocaleDateString()}`}</div>
+        </div>
+        <div class="amount">₹${finalBalance.toLocaleString('en-IN')}</div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-header-icon">📋</div>
+        <h3>Payment Transactions — ${monthName}</h3>
+    </div>
+
+    <table class="data-table">
         <thead>
             <tr>
                 <th>Date</th>
                 <th>Time</th>
-                <th>Amount</th>
+                <th class="right">Amount</th>
                 <th>Paid By</th>
                 <th>Notes</th>
             </tr>
@@ -4274,40 +4460,44 @@ async function printSalaryStatement() {
         <tfoot>
             <tr>
                 <td colspan="2" style="text-align:right;">Total Collected:</td>
-                <td style="color:#15803d;">₹${currentCollected.toLocaleString('en-IN')}</td>
+                <td class="right" style="color:#15803d;font-weight:700;">₹${currentCollected.toLocaleString('en-IN')}</td>
                 <td colspan="2"></td>
             </tr>
         </tfoot>
     </table>
 
-    <div class="summary" style="grid-template-columns:1fr 1fr;">
-        <div class="summary-box total">
-            <p>Total Amount Due (Old + Current)</p>
-            <h2>₹${totalDue.toLocaleString('en-IN')}</h2>
+    <div class="financial-highlight" style="margin-top:20px;">
+        <div class="financial-highlight-header">Final Balance Calculation</div>
+        <div class="financial-highlight-body">
+            <div class="financial-cell">
+                <div class="flabel">Total Amount Due</div>
+                <div class="fvalue">₹${totalDue.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="financial-cell paid">
+                <div class="flabel">Total Received</div>
+                <div class="fvalue">₹${currentCollected.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="financial-cell ${finalBalance > 0 ? 'due' : 'paid'}">
+                <div class="flabel">${finalBalance > 0 ? 'Outstanding' : 'Settled'}</div>
+                <div class="fvalue">₹${finalBalance.toLocaleString('en-IN')}</div>
+            </div>
         </div>
-        <div class="summary-box ${finalBalance > 0 ? 'balance-box' : 'paid-box'}">
-            <p>${finalBalance > 0 ? '⚠️ Remaining Balance' : '✅ Final Balance'}</p>
-            <h2>₹${finalBalance.toLocaleString('en-IN')}</h2>
-        </div>
     </div>
-
-    ${finalBalance > 0 ? `
-    <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:8px;margin-bottom:25px;font-size:13px;color:#92400e;">
-        <strong>⚠️ Note:</strong> Outstanding balance of <strong>₹${finalBalance.toLocaleString('en-IN')}</strong> remains unpaid.
-    </div>
-    ` : `
-    <div style="background:#dcfce7;border-left:4px solid #16a34a;padding:14px 18px;border-radius:8px;margin-bottom:25px;font-size:13px;color:#166534;">
-        <strong>✅ Fully Paid:</strong> All dues for this month have been cleared.
-    </div>
-    `}
 
     <div class="signatures">
-        <div class="sig">Employee Signature</div>
-        <div class="sig">Authorized Signatory</div>
+        <div class="sig-block">
+            <div class="sig-name">${escapeHtml(staff.name)}</div>
+            <div class="sig-role">Employee Signature</div>
+        </div>
+        <div class="sig-block">
+            <div class="sig-name">Authorized Signatory</div>
+            <div class="sig-role">For ${escapeHtml(company.name || 'StaffPro')}</div>
+        </div>
     </div>
 
-    <div class="footer-note">
-        This is a computer-generated salary statement. Generated on ${new Date().toLocaleString()}.
+    <div class="doc-footer">
+        This is a computer-generated salary statement issued by <strong>${escapeHtml(company.name || 'StaffPro')}</strong>.
+        Generated on ${new Date().toLocaleString()}.
     </div>
 </body>
 </html>
