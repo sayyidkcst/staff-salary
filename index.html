@@ -310,6 +310,17 @@
     .wh-badge.low { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
     .wh-badge.empty { background: #f1f5f9; color: #94a3b8; border-color: #e2e8f0; }
 
+    /* Experience badge */
+    .exp-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        background: #f3e8ff; color: #6d28d9;
+        font-size: 11px; font-weight: 600;
+        padding: 4px 9px; border-radius: 20px;
+        border: 1px solid #d8b4fe;
+        white-space: nowrap;
+    }
+    .exp-badge.new { background: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+
     /* ================= QUICK ACTIONS ================= */
     .quick-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .quick-btn {
@@ -836,7 +847,10 @@ Kerala, India</textarea>
         <section class="section" id="staff">
             <div class="page-head">
                 <div><h2>Staff Details</h2><p>Manage employees and staff information</p></div>
-                <button class="primary-btn" onclick="addStaff()">➕ Add Staff</button>
+                <div class="page-head-actions">
+                    <button class="hr-btn" onclick="printHRStaffReport()">📄 Print HR Report</button>
+                    <button class="primary-btn" onclick="addStaff()">➕ Add Staff</button>
+                </div>
             </div>
 
             <div class="card">
@@ -846,11 +860,12 @@ Kerala, India</textarea>
                             <tr>
                                 <th>ID</th><th>Staff Name</th><th>Role</th>
                                 <th>Department</th><th>Joined Date</th>
+                                <th>Experience</th>
                                 <th>Daily Rate</th><th style="text-align:right;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="staffTableBody">
-                            <tr><td colspan="7" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
+                            <tr><td colspan="8" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1424,6 +1439,58 @@ function escapeHtml(str) {
 }
 
 /* ================================================================
+   EXPERIENCE CALCULATION HELPERS
+   ================================================================ */
+function calculateExperience(joinedDateStr) {
+    if (!joinedDateStr) return null;
+
+    let joined;
+    if (joinedDateStr.includes('-')) {
+        joined = new Date(joinedDateStr);
+    } else {
+        joined = new Date(joinedDateStr);
+    }
+    if (isNaN(joined.getTime())) return null;
+
+    const now = new Date();
+    if (joined > now) return null;
+
+    let years = now.getFullYear() - joined.getFullYear();
+    let months = now.getMonth() - joined.getMonth();
+    let days = now.getDate() - joined.getDate();
+
+    if (days < 0) {
+        months--;
+        const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        days += prevMonth.getDate();
+    }
+    if (months < 0) {
+        years--;
+        months += 12;
+    }
+
+    const totalDays = Math.floor((now - joined) / (1000 * 60 * 60 * 24));
+
+    return { years, months, days, totalDays };
+}
+
+function formatExperience(exp) {
+    if (!exp) return '—';
+    const parts = [];
+    if (exp.years > 0) parts.push(exp.years + 'y');
+    if (exp.months > 0) parts.push(exp.months + 'm');
+    if (exp.days > 0) parts.push(exp.days + 'd');
+    if (parts.length === 0) return 'New';
+    return parts.join(' ');
+}
+
+function getExperienceClass(exp) {
+    if (!exp) return 'exp-badge new';
+    if (exp.totalDays < 30) return 'exp-badge new';
+    return 'exp-badge';
+}
+
+/* ================================================================
    WORKING HOURS HELPERS
    ================================================================ */
 function calculateWorkingHours(checkIn, checkOut) {
@@ -1544,39 +1611,6 @@ function getPrintStyles() {
         .ref-bar div { color: #475569; }
         .ref-bar strong { color: #0f172a; font-weight: 600; }
 
-        /* ============ INFO GRID ============ */
-        .info-grid-2 {
-            display: grid; grid-template-columns: 1fr 1fr;
-            gap: 18px; margin-bottom: 22px;
-        }
-        .info-panel {
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .info-panel-title {
-            background: #1e293b;
-            color: white;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            padding: 8px 14px;
-        }
-        .info-panel-body { padding: 12px 14px; }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px dashed #e2e8f0;
-            font-size: 11px;
-        }
-        .info-row:last-child { border-bottom: none; }
-        .info-row span:first-child { color: #64748b; }
-        .info-row span:last-child {
-            color: #0f172a; font-weight: 600; text-align: right;
-        }
-
         /* ============ STAT SUMMARY ============ */
         .stat-grid {
             display: grid;
@@ -1684,105 +1718,6 @@ function getPrintStyles() {
             font-size: 10px;
             letter-spacing: 0.3px;
         }
-        .badge-print {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 9px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-        }
-        .badge-print.present { background: #dcfce7; color: #15803d; }
-        .badge-print.absent { background: #fee2e2; color: #b91c1c; }
-        .badge-print.leave { background: #fef3c7; color: #b45309; }
-        .badge-print.weekoff { background: #e0e7ff; color: #4338ca; }
-        .badge-print.paid { background: #dcfce7; color: #15803d; }
-        .badge-print.due { background: #fee2e2; color: #b91c1c; }
-
-        /* ============ FINANCIAL HIGHLIGHT ============ */
-        .financial-highlight {
-            border: 2px solid #1e293b;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 20px;
-        }
-        .financial-highlight-header {
-            background: #1e293b;
-            color: white;
-            padding: 8px 16px;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-        }
-        .financial-highlight-body {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0;
-        }
-        .financial-cell {
-            padding: 14px 12px;
-            text-align: center;
-            border-right: 1px solid #cbd5e1;
-        }
-        .financial-cell:last-child { border-right: none; }
-        .financial-cell .flabel {
-            font-size: 9px;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-        }
-        .financial-cell .fvalue {
-            font-size: 17px;
-            font-weight: 700;
-            color: #0f172a;
-        }
-        .financial-cell.grand { background: #eff6ff; }
-        .financial-cell.grand .fvalue { color: #1d4ed8; }
-        .financial-cell.due { background: #fef2f2; }
-        .financial-cell.due .fvalue { color: #b91c1c; }
-        .financial-cell.paid { background: #f0fdf4; }
-        .financial-cell.paid .fvalue { color: #15803d; }
-
-        /* ============ OUTSTANDING / BALANCE BANNER ============ */
-        .balance-banner {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 2px solid;
-        }
-        .balance-banner.pending {
-            background: #fef2f2;
-            border-color: #fca5a5;
-        }
-        .balance-banner.pending .label { color: #991b1b; }
-        .balance-banner.pending .amount { color: #b91c1c; }
-        .balance-banner.cleared {
-            background: #f0fdf4;
-            border-color: #86efac;
-        }
-        .balance-banner.cleared .label { color: #166534; }
-        .balance-banner.cleared .amount { color: #15803d; }
-        .balance-banner .label {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-            margin-bottom: 3px;
-        }
-        .balance-banner .sub {
-            font-size: 10px; color: #64748b;
-        }
-        .balance-banner .amount {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
 
         /* ============ SIGNATURES ============ */
         .signatures {
@@ -1849,7 +1784,6 @@ function getPrintStyles() {
             body { padding: 0; }
             .no-print { display: none !important; }
             .letterhead { page-break-inside: avoid; }
-            .financial-highlight, .balance-banner { page-break-inside: avoid; }
             table.data-table { page-break-inside: auto; }
             tr { page-break-inside: avoid; }
         }
@@ -2158,18 +2092,24 @@ async function loadStaff() {
         if (error) throw error;
 
         if (!data || !data.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">No staff records found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;">No staff records found.</td></tr>';
             return;
         }
 
         tbody.innerHTML = data.map(s => {
             const initials = (s.name || '??').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
+            const exp = calculateExperience(s.joined_date);
+            const expLabel = formatExperience(exp);
+            const expClass = getExperienceClass(exp);
+            const expTitle = exp ? `${exp.years} years, ${exp.months} months, ${exp.days} days (${exp.totalDays} total days)` : 'No join date';
+
             return `<tr>
                 <td>${escapeHtml(s.staff_id || s.id)}</td>
                 <td><div class="staff-name"><div class="small-avatar">${initials}</div>${escapeHtml(s.name || '—')}</div></td>
                 <td>${escapeHtml(s.role || '—')}</td>
                 <td>${escapeHtml(s.department || '—')}</td>
                 <td>${s.joined_date || '—'}</td>
+                <td><span class="${expClass}" title="${escapeHtml(expTitle)}">📅 ${expLabel}</span></td>
                 <td>${s.daily_rate != null ? '₹' + s.daily_rate : '—'}</td>
                 <td style="text-align:right;white-space:nowrap;">
                     <button class="action-btn edit" title="Edit" onclick='openEditStaff(${JSON.stringify(s)})'>✏️</button>
@@ -2179,8 +2119,271 @@ async function loadStaff() {
         }).join('');
     } catch (err) {
         console.error('Staff load error:', err);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#dc2626;">Error loading staff data.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;">Error loading staff data.</td></tr>';
         showGlobalStatus('Error loading staff: ' + err.message, 'error');
+    }
+}
+
+/* ================================================================
+   PRINT HR STAFF REPORT — STAFF DETAILS ONLY (no salary/attendance)
+   ================================================================ */
+async function printHRStaffReport() {
+    showGlobalStatus('Generating HR staff report…', 'info');
+
+    let company = { name: 'StaffPro', address: '', phone: '', email: '' };
+    try {
+        const { data } = await _supabase
+            .from('company')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+        if (data) company = data;
+    } catch (err) { console.warn('Company lookup failed:', err); }
+
+    try {
+        const { data: staffData, error } = await _supabase
+            .from('staff')
+            .select('*')
+            .order('staff_id', { ascending: true });
+
+        if (error) throw error;
+
+        if (!staffData || !staffData.length) {
+            showGlobalStatus('No staff records available for the report.', 'error');
+            return;
+        }
+
+        // Calculate totals
+        const totalStaff = staffData.length;
+
+        // Department breakdown
+        const deptCount = {};
+        staffData.forEach(s => {
+            const dept = s.department || 'Unassigned';
+            deptCount[dept] = (deptCount[dept] || 0) + 1;
+        });
+
+        // Experience distribution
+        let totalExpDays = 0;
+        let seniorCount = 0; // > 1 year
+        let midCount = 0;    // 3 months - 1 year
+        let newCount = 0;    // < 3 months
+        staffData.forEach(s => {
+            const exp = calculateExperience(s.joined_date);
+            if (exp) {
+                totalExpDays += exp.totalDays;
+                if (exp.totalDays >= 365) seniorCount++;
+                else if (exp.totalDays >= 90) midCount++;
+                else newCount++;
+            } else {
+                newCount++;
+            }
+        });
+        const avgExpDays = totalExpDays / totalStaff;
+        const avgExpYears = Math.floor(avgExpDays / 365);
+        const avgExpMonths = Math.floor((avgExpDays % 365) / 30);
+
+        // Role breakdown
+        const roleCount = {};
+        staffData.forEach(s => {
+            const role = s.role || 'Unspecified';
+            roleCount[role] = (roleCount[role] || 0) + 1;
+        });
+
+        // Staff rows
+        const staffRows = staffData.map(s => {
+            const exp = calculateExperience(s.joined_date);
+            const expLabel = formatExperience(exp);
+
+            return `<tr>
+                <td class="mono">${escapeHtml(s.staff_id || '—')}</td>
+                <td><strong>${escapeHtml(s.name || '—')}</strong></td>
+                <td>${escapeHtml(s.role || '—')}</td>
+                <td>${escapeHtml(s.department || '—')}</td>
+                <td class="mono">${s.joined_date || '—'}</td>
+                <td class="center">${expLabel}</td>
+            </tr>`;
+        }).join('');
+
+        // Department rows
+        const deptRows = Object.entries(deptCount)
+            .sort((a, b) => b[1] - a[1])
+            .map(([dept, count]) => {
+                const pct = ((count / totalStaff) * 100).toFixed(1);
+                return `<tr>
+                    <td>${escapeHtml(dept)}</td>
+                    <td class="center">${count}</td>
+                    <td class="center">${pct}%</td>
+                </tr>`;
+            }).join('');
+
+        // Role rows
+        const roleRows = Object.entries(roleCount)
+            .sort((a, b) => b[1] - a[1])
+            .map(([role, count]) => {
+                const pct = ((count / totalStaff) * 100).toFixed(1);
+                return `<tr>
+                    <td>${escapeHtml(role)}</td>
+                    <td class="center">${count}</td>
+                    <td class="center">${pct}%</td>
+                </tr>`;
+            }).join('');
+
+        const printWindow = window.open('', '_blank', 'width=1200,height=1000');
+        if (!printWindow) {
+            showGlobalStatus('Please allow pop-ups to print.', 'error');
+            return;
+        }
+
+        printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>HR Staff Report — ${escapeHtml(company.name || 'StaffPro')}</title>
+    <style>${getPrintStyles()}
+        @page { size: A4 portrait; margin: 12mm; }
+        body { max-width: 1000px; }
+        table.data-table { font-size: 11px; }
+        table.data-table th { font-size: 9px; padding: 9px 8px; }
+        table.data-table td { padding: 8px; font-size: 11px; }
+        .split-tables { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .mini-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .mini-table th { background: #1e293b; color: white; padding: 8px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.7px; }
+        .mini-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
+        .mini-table tbody tr:nth-child(even) { background: #f8fafc; }
+        .mini-table td.center { text-align: center; }
+        .mini-table th.center { text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="print-actions no-print">
+        <button onclick="window.print()">🖨️ Print HR Staff Report</button>
+        <button class="secondary" onclick="window.close()">Close</button>
+    </div>
+
+    ${buildLetterhead(company)}
+
+    <div class="doc-title">
+        <h2>HR Staff Directory Report</h2>
+        <p>Complete Employee Records & Experience Summary</p>
+    </div>
+
+    <div class="ref-bar">
+        <div><strong>Report Date:</strong> ${new Date().toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+        <div><strong>Total Staff:</strong> ${totalStaff}</div>
+        <div><strong>Generated:</strong> ${new Date().toLocaleString()}</div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-header-icon">📊</div>
+        <h3>Workforce Overview</h3>
+    </div>
+
+    <div class="stat-grid" style="grid-template-columns:repeat(5,1fr);">
+        <div class="stat-card accent">
+            <div class="label">Total Staff</div>
+            <div class="value">${totalStaff}</div>
+        </div>
+        <div class="stat-card success">
+            <div class="label">Senior (1+ yr)</div>
+            <div class="value">${seniorCount}</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="label">Mid (3m - 1y)</div>
+            <div class="value">${midCount}</div>
+        </div>
+        <div class="stat-card purple">
+            <div class="label">New (&lt; 3m)</div>
+            <div class="value">${newCount}</div>
+        </div>
+        <div class="stat-card">
+            <div class="label">Avg. Experience</div>
+            <div class="value">${avgExpYears}y ${avgExpMonths}m</div>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-header-icon">🏢</div>
+        <h3>Distribution Summary</h3>
+    </div>
+
+    <div class="split-tables" style="margin-bottom:22px;">
+        <div>
+            <table class="mini-table">
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th class="center">Staff</th>
+                        <th class="center">%</th>
+                    </tr>
+                </thead>
+                <tbody>${deptRows}</tbody>
+            </table>
+        </div>
+        <div>
+            <table class="mini-table">
+                <thead>
+                    <tr>
+                        <th>Role / Designation</th>
+                        <th class="center">Staff</th>
+                        <th class="center">%</th>
+                    </tr>
+                </thead>
+                <tbody>${roleRows}</tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-header-icon">👥</div>
+        <h3>Complete Staff Directory</h3>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Staff ID</th>
+                <th>Employee Name</th>
+                <th>Role / Designation</th>
+                <th>Department</th>
+                <th>Joined Date</th>
+                <th class="center">Experience</th>
+            </tr>
+        </thead>
+        <tbody>${staffRows}</tbody>
+        <tfoot>
+            <tr>
+                <td colspan="6" style="text-align:right;">TOTAL STAFF: ${totalStaff}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="signatures">
+        <div class="sig-block">
+            <div class="sig-name">HR Manager</div>
+            <div class="sig-role">Human Resources Department</div>
+        </div>
+        <div class="sig-block">
+            <div class="sig-name">Authorized Signatory</div>
+            <div class="sig-role">For ${escapeHtml(company.name || 'StaffPro')}</div>
+        </div>
+    </div>
+
+    <div class="doc-footer">
+        This is a computer-generated HR Staff Directory Report issued by <strong>${escapeHtml(company.name || 'StaffPro')}</strong>.
+        Confidential — For internal use only. Generated on ${new Date().toLocaleString()}.
+    </div>
+</body>
+</html>
+        `);
+
+        printWindow.document.close();
+        showGlobalStatus('HR staff report opened successfully.', 'success');
+
+    } catch (err) {
+        console.error('HR Staff Report error:', err);
+        showGlobalStatus('Error generating HR staff report: ' + err.message, 'error');
     }
 }
 
@@ -2761,27 +2964,6 @@ async function printSalarySlip() {
         <div><strong>Generated:</strong> ${new Date().toLocaleDateString()}</div>
     </div>
 
-    <div class="info-grid-2">
-        <div class="info-panel">
-            <div class="info-panel-title">Employee Details</div>
-            <div class="info-panel-body">
-                <div class="info-row"><span>Staff ID</span><span>${escapeHtml(currentStaffDetail.staff_id || '—')}</span></div>
-                <div class="info-row"><span>Full Name</span><span>${escapeHtml(currentStaffDetail.name || '—')}</span></div>
-                <div class="info-row"><span>Designation</span><span>${escapeHtml(currentStaffDetail.role || '—')}</span></div>
-                <div class="info-row"><span>Department</span><span>${escapeHtml(currentStaffDetail.department || '—')}</span></div>
-            </div>
-        </div>
-        <div class="info-panel">
-            <div class="info-panel-title">Payment Details</div>
-            <div class="info-panel-body">
-                <div class="info-row"><span>Pay Period</span><span>${monthName}</span></div>
-                <div class="info-row"><span>Daily Rate</span><span>₹${dailyRate.toLocaleString('en-IN')}</span></div>
-                <div class="info-row"><span>Paid Days</span><span>${paidDays}</span></div>
-                <div class="info-row"><span>Total Hours</span><span>${formatHours(totalHours)}</span></div>
-            </div>
-        </div>
-    </div>
-
     <div class="stat-grid">
         <div class="stat-card success">
             <div class="label">Present</div>
@@ -2806,61 +2988,25 @@ async function printSalarySlip() {
     </div>
 
     <div class="section-header">
-        <div class="section-header-icon">↩</div>
-        <h3>Carry Forward Balance (From ${escapeHtml(prevMonthName)})</h3>
-    </div>
-
-    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
-        <div class="stat-card">
-            <div class="label">Previous Payable</div>
-            <div class="value">₹${prevPayable.toLocaleString('en-IN')}</div>
-        </div>
-        <div class="stat-card success">
-            <div class="label">Previously Paid</div>
-            <div class="value">₹${prevCollected.toLocaleString('en-IN')}</div>
-        </div>
-        <div class="stat-card warning">
-            <div class="label">Old Balance</div>
-            <div class="value">₹${oldBalance.toLocaleString('en-IN')}</div>
-        </div>
-        <div class="stat-card">
-            <div class="label">Prev. Attendance</div>
-            <div class="value">${prevPresent}P / ${prevWeekOff}W</div>
-        </div>
-    </div>
-
-    <div class="section-header">
         <div class="section-header-icon">💰</div>
-        <h3>Current Month Computation</h3>
+        <h3>Salary Summary — ${monthName}</h3>
     </div>
 
-    <div class="financial-highlight">
-        <div class="financial-highlight-header">Salary Summary — ${monthName}</div>
-        <div class="financial-highlight-body">
-            <div class="financial-cell">
-                <div class="flabel">Current Payable</div>
-                <div class="fvalue">₹${currentPayable.toLocaleString('en-IN')}</div>
-            </div>
-            <div class="financial-cell paid">
-                <div class="flabel">Amount Collected</div>
-                <div class="fvalue">₹${currentCollected.toLocaleString('en-IN')}</div>
-            </div>
-            <div class="financial-cell grand">
-                <div class="flabel">Total Due (Old + Current)</div>
-                <div class="fvalue">₹${totalDue.toLocaleString('en-IN')}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="balance-banner ${finalOutstanding > 0 ? 'pending' : 'cleared'}">
-        <div>
-            <div class="label">${finalOutstanding > 0 ? '⚠ Outstanding Balance' : '✓ Account Settled'}</div>
-            <div class="sub">${finalOutstanding > 0
-                ? `Pending balance as on ${new Date().toLocaleDateString()}`
-                : `All dues cleared — Total collected: ₹${currentCollected.toLocaleString('en-IN')}`}</div>
-        </div>
-        <div class="amount">₹${finalOutstanding.toLocaleString('en-IN')}</div>
-    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th class="right">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Current Payable (${paidDays} days × ₹${dailyRate.toLocaleString('en-IN')})</td><td class="right mono">₹${currentPayable.toLocaleString('en-IN')}</td></tr>
+            <tr><td>Previous Balance (Carried Forward)</td><td class="right mono">₹${oldBalance.toLocaleString('en-IN')}</td></tr>
+            <tr><td><strong>Total Due</strong></td><td class="right mono"><strong>₹${totalDue.toLocaleString('en-IN')}</strong></td></tr>
+            <tr><td>Amount Collected</td><td class="right mono" style="color:#15803d;">₹${currentCollected.toLocaleString('en-IN')}</td></tr>
+            <tr><td><strong>Outstanding Balance</strong></td><td class="right mono" style="color:${finalOutstanding > 0 ? '#b91c1c' : '#15803d'};font-weight:700;">₹${finalOutstanding.toLocaleString('en-IN')}</td></tr>
+        </tbody>
+    </table>
 
     <div class="section-header">
         <div class="section-header-icon">📋</div>
@@ -2879,13 +3025,6 @@ async function printSalarySlip() {
             </tr>
         </thead>
         <tbody>${rows}</tbody>
-        <tfoot>
-            <tr>
-                <td colspan="4" style="text-align:right;">Payable Days: ${paidDays} (${present}P + ${weekOff}WO) × ₹${dailyRate.toLocaleString('en-IN')} =</td>
-                <td class="center">${formatHours(totalHours)}</td>
-                <td class="center">₹${currentPayable.toLocaleString('en-IN')}</td>
-            </tr>
-        </tfoot>
     </table>
 
     <div class="signatures">
@@ -2911,7 +3050,7 @@ async function printSalarySlip() {
 }
 
 /* ================================================================
-   PRINT HR DEPARTMENT REPORT — PROFESSIONAL LAYOUT
+   PRINT HR DEPARTMENT REPORT — ATTENDANCE + PAYROLL (monthly)
    ================================================================ */
 async function printHRReport() {
     let monthValue;
@@ -3122,32 +3261,23 @@ async function printHRReport() {
         <h3>Payroll Summary</h3>
     </div>
 
-    <div class="financial-highlight">
-        <div class="financial-highlight-header">Financial Overview — ${monthName}</div>
-        <div class="financial-highlight-body">
-            <div class="financial-cell">
-                <div class="flabel">Total Hours Worked</div>
-                <div class="fvalue">${formatHours(totalHoursAll)}</div>
-            </div>
-            <div class="financial-cell grand">
-                <div class="flabel">Total Payable</div>
-                <div class="fvalue">₹${totalPayable.toLocaleString('en-IN')}</div>
-            </div>
-            <div class="financial-cell paid">
-                <div class="flabel">Total Collected</div>
-                <div class="fvalue">₹${totalCollected.toLocaleString('en-IN')}</div>
-            </div>
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="stat-card">
+            <div class="label">Total Hours Worked</div>
+            <div class="value">${formatHours(totalHoursAll)}</div>
         </div>
-    </div>
-
-    <div class="balance-banner ${totalOutstanding > 0 ? 'pending' : 'cleared'}">
-        <div>
-            <div class="label">${totalOutstanding > 0 ? '⚠ Outstanding Payroll Balance' : '✓ Payroll Fully Settled'}</div>
-            <div class="sub">${totalOutstanding > 0
-                ? `Pending amount across ${Object.values(summary).filter(s => s.balance > 0).length} staff member(s)`
-                : `All salary dues have been cleared for ${monthName}`}</div>
+        <div class="stat-card accent">
+            <div class="label">Total Payable</div>
+            <div class="value">₹${totalPayable.toLocaleString('en-IN')}</div>
         </div>
-        <div class="amount">₹${totalOutstanding.toLocaleString('en-IN')}</div>
+        <div class="stat-card success">
+            <div class="label">Total Collected</div>
+            <div class="value">₹${totalCollected.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="stat-card ${totalOutstanding > 0 ? 'danger' : 'success'}">
+            <div class="label">Outstanding</div>
+            <div class="value">₹${totalOutstanding.toLocaleString('en-IN')}</div>
+        </div>
     </div>
 
     <div class="section-header">
@@ -4363,83 +4493,26 @@ async function printSalaryStatement() {
         <div><strong>Generated:</strong> ${new Date().toLocaleString()}</div>
     </div>
 
-    <div class="info-grid-2">
-        <div class="info-panel">
-            <div class="info-panel-title">Employee Information</div>
-            <div class="info-panel-body">
-                <div class="info-row"><span>Staff ID</span><span>${escapeHtml(staff.staff_id)}</span></div>
-                <div class="info-row"><span>Name</span><span>${escapeHtml(staff.name)}</span></div>
-                <div class="info-row"><span>Designation</span><span>${escapeHtml(staff.role || '—')}</span></div>
-                <div class="info-row"><span>Department</span><span>${escapeHtml(staff.department || '—')}</span></div>
-            </div>
-        </div>
-        <div class="info-panel">
-            <div class="info-panel-title">Payroll Details</div>
-            <div class="info-panel-body">
-                <div class="info-row"><span>Statement Period</span><span>${monthName}</span></div>
-                <div class="info-row"><span>Daily Rate</span><span>₹${dailyRate.toLocaleString('en-IN')}</span></div>
-                <div class="info-row"><span>Present Days</span><span>${staff.present}</span></div>
-                <div class="info-row"><span>Week Offs</span><span>${staff.week_off}</span></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="section-header">
-        <div class="section-header-icon">↩</div>
-        <h3>Carry Forward — From ${escapeHtml(prevMonthName)}</h3>
-    </div>
-
-    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);">
-        <div class="stat-card">
-            <div class="label">Prev. Payable</div>
-            <div class="value">₹${prevPayable.toLocaleString('en-IN')}</div>
-        </div>
-        <div class="stat-card success">
-            <div class="label">Prev. Collected</div>
-            <div class="value">₹${prevCollected.toLocaleString('en-IN')}</div>
-        </div>
-        <div class="stat-card warning">
-            <div class="label">Old Balance</div>
-            <div class="value">₹${oldBalance.toLocaleString('en-IN')}</div>
-        </div>
-        <div class="stat-card">
-            <div class="label">Prev. Attendance</div>
-            <div class="value">${prevPresent}P / ${prevWeekOff}W</div>
-        </div>
-    </div>
-
     <div class="section-header">
         <div class="section-header-icon">💰</div>
         <h3>Payment Summary — ${monthName}</h3>
     </div>
 
-    <div class="financial-highlight">
-        <div class="financial-highlight-header">Financial Consolidation</div>
-        <div class="financial-highlight-body">
-            <div class="financial-cell">
-                <div class="flabel">Current Payable</div>
-                <div class="fvalue">₹${currentPayable.toLocaleString('en-IN')}</div>
-            </div>
-            <div class="financial-cell paid">
-                <div class="flabel">Amount Collected</div>
-                <div class="fvalue">₹${currentCollected.toLocaleString('en-IN')}</div>
-            </div>
-            <div class="financial-cell grand">
-                <div class="flabel">Total Due</div>
-                <div class="fvalue">₹${totalDue.toLocaleString('en-IN')}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="balance-banner ${finalBalance > 0 ? 'pending' : 'cleared'}">
-        <div>
-            <div class="label">${finalBalance > 0 ? '⚠ Outstanding Balance' : '✓ Account Fully Settled'}</div>
-            <div class="sub">${finalBalance > 0
-                ? `Pending balance carried forward from previous periods`
-                : `All salary dues cleared as on ${new Date().toLocaleDateString()}`}</div>
-        </div>
-        <div class="amount">₹${finalBalance.toLocaleString('en-IN')}</div>
-    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th class="right">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Current Payable</td><td class="right mono">₹${currentPayable.toLocaleString('en-IN')}</td></tr>
+            <tr><td>Previous Balance (Carried Forward)</td><td class="right mono">₹${oldBalance.toLocaleString('en-IN')}</td></tr>
+            <tr><td><strong>Total Due</strong></td><td class="right mono"><strong>₹${totalDue.toLocaleString('en-IN')}</strong></td></tr>
+            <tr><td>Amount Collected</td><td class="right mono" style="color:#15803d;">₹${currentCollected.toLocaleString('en-IN')}</td></tr>
+            <tr><td><strong>Outstanding Balance</strong></td><td class="right mono" style="color:${finalBalance > 0 ? '#b91c1c' : '#15803d'};font-weight:700;">₹${finalBalance.toLocaleString('en-IN')}</td></tr>
+        </tbody>
+    </table>
 
     <div class="section-header">
         <div class="section-header-icon">📋</div>
@@ -4457,32 +4530,7 @@ async function printSalaryStatement() {
             </tr>
         </thead>
         <tbody>${paymentRows}</tbody>
-        <tfoot>
-            <tr>
-                <td colspan="2" style="text-align:right;">Total Collected:</td>
-                <td class="right" style="color:#15803d;font-weight:700;">₹${currentCollected.toLocaleString('en-IN')}</td>
-                <td colspan="2"></td>
-            </tr>
-        </tfoot>
     </table>
-
-    <div class="financial-highlight" style="margin-top:20px;">
-        <div class="financial-highlight-header">Final Balance Calculation</div>
-        <div class="financial-highlight-body">
-            <div class="financial-cell">
-                <div class="flabel">Total Amount Due</div>
-                <div class="fvalue">₹${totalDue.toLocaleString('en-IN')}</div>
-            </div>
-            <div class="financial-cell paid">
-                <div class="flabel">Total Received</div>
-                <div class="fvalue">₹${currentCollected.toLocaleString('en-IN')}</div>
-            </div>
-            <div class="financial-cell ${finalBalance > 0 ? 'due' : 'paid'}">
-                <div class="flabel">${finalBalance > 0 ? 'Outstanding' : 'Settled'}</div>
-                <div class="fvalue">₹${finalBalance.toLocaleString('en-IN')}</div>
-            </div>
-        </div>
-    </div>
 
     <div class="signatures">
         <div class="sig-block">
