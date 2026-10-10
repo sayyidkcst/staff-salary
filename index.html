@@ -1149,6 +1149,9 @@ Kerala, India</textarea>
             <div><label>Joined Date</label><input id="editStaffJoined" type="date"></div>
             <div><label>Daily Rate (₹)</label><input id="editStaffRate" type="number" step="0.01" placeholder="e.g. 500"></div>
         </div>
+        <div class="form-row full">
+            <div><label>New rate applies from (earlier entries keep their old rate)</label><input id="editStaffRateFrom" type="date"></div>
+        </div>
 
         <div class="modal-actions">
             <button class="btn-secondary" onclick="closeEditModal()">Cancel</button>
@@ -1412,6 +1415,51 @@ function showGlobalStatus(message, type = 'info') {
     el.style.display = 'flex';
     clearTimeout(el._timeout);
     el._timeout = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+/* ================================================================
+   RATE HISTORY — keeps old entries on the rate that applied at that time
+   ================================================================ */
+let _rateHistoryCache = null;
+async function loadRateHistory(force) {
+    if (_rateHistoryCache && !force) return _rateHistoryCache;
+    const map = {};
+    try {
+        const { data, error } = await _supabase
+            .from('staff_rate_history')
+            .select('staff_id, daily_rate, effective_from')
+            .order('effective_from', { ascending: true });
+        if (error) throw error;
+        (data || []).forEach(r => {
+            (map[r.staff_id] = map[r.staff_id] || []).push({
+                rate: Number(r.daily_rate || 0),
+                from: String(r.effective_from).slice(0, 10)
+            });
+        });
+    } catch (err) {
+        console.warn('Rate history unavailable, using current rate:', err.message || err);
+    }
+    _rateHistoryCache = map;
+    return map;
+}
+function rateOnDate(history, staffId, date, currentRate) {
+    const list = history[staffId];
+    if (!list || !list.length) return Number(currentRate || 0);
+    const d = String(date).slice(0, 10);
+    let rate = list[0].rate;
+    for (const h of list) { if (h.from <= d) rate = h.rate; else break; }
+    return rate;
+}
+function isPaidStatus(raw) {
+    const st = normalizeStatus(raw);
+    return st === 'present' || st === 'week_off';
+}
+function sumPayable(history, staffId, records, currentRate) {
+    let total = 0;
+    (records || []).forEach(a => {
+        if (isPaidStatus(a.status)) total += rateOnDate(history, staffId, a.date, currentRate);
+    });
+    return total;
 }
 
 function normalizeStatus(raw) {
@@ -2727,8 +2775,9 @@ async function loadStaffDetailMonth() {
             dailyRate = (staffRow && staffRow.daily_rate) ? Number(staffRow.daily_rate) : 0;
         } catch (err) { console.warn('Rate lookup failed:', err); }
 
+        const rateHistory = await loadRateHistory();
         const paidDays = present + weekOff;
-        const totalAmount = paidDays * dailyRate;
+        const totalAmount = sumPayable(rateHistory, currentStaffDetailCode, data, dailyRate);
         document.getElementById('staffDetailTotal').textContent =
             '₹' + totalAmount.toLocaleString('en-IN');
 
@@ -2850,8 +2899,14 @@ async function printSalarySlip() {
     }
 
     const dailyRate = currentStaffDetail.daily_rate || 0;
+    const rateHistory = await loadRateHistory();
     const paidDays = present + weekOff;
-    const currentPayable = paidDays * dailyRate;
+    const currentPayable = sumPayable(rateHistory, currentStaffDetailCode, attRecords, dailyRate);
+    const slipRates = new Set(attRecords.filter(a => isPaidStatus(a.status))
+        .map(a => rateOnDate(rateHistory, currentStaffDetailCode, a.date, dailyRate)));
+    const slipRateLabel = slipRates.size > 1
+        ? `${paidDays} days, mixed rates`
+        : `${paidDays} days × ₹${(slipRates.size ? [...slipRates][0] : dailyRate).toLocaleString('en-IN')}`;
 
     let currentCollected = 0;
     try {
@@ -2872,15 +2927,16 @@ async function printSalarySlip() {
     const prevLastDayDate = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth() + 1, 0);
     const prevLastDay = `${prevMonthValue}-${String(prevLastDayDate.getDate()).padStart(2, '0')}`;
 
-    let prevPresent = 0, prevWeekOff = 0, prevCollected = 0;
+    let prevPresent = 0, prevWeekOff = 0, prevCollected = 0, prevAttRows = [];
     try {
         const { data: prevAtt } = await _supabase
             .from('attendance')
-            .select('status')
+            .select('date, status')
             .eq('staff_id', currentStaffDetailCode)
             .gte('date', prevFirstDay)
             .lte('date', prevLastDay);
 
+        prevAttRows = prevAtt || [];
         (prevAtt || []).forEach(a => {
             const s = normalizeStatus(a.status);
             if (s === 'present') prevPresent++;
@@ -2900,7 +2956,7 @@ async function printSalarySlip() {
         console.warn('Prev month lookup failed:', err);
     }
 
-    const prevPayable = (prevPresent + prevWeekOff) * dailyRate;
+    const prevPayable = sumPayable(rateHistory, currentStaffDetailCode, prevAttRows, dailyRate);
     const oldBalance = Math.max(0, prevPayable - prevCollected);
     const totalDue = oldBalance + currentPayable;
     const finalOutstanding = Math.max(0, totalDue - currentCollected);
@@ -3000,7 +3056,7 @@ async function printSalarySlip() {
             </tr>
         </thead>
         <tbody>
-            <tr><td>Current Payable (${paidDays} days × ₹${dailyRate.toLocaleString('en-IN')})</td><td class="right mono">₹${currentPayable.toLocaleString('en-IN')}</td></tr>
+            <tr><td>Current Payable (${slipRateLabel})</td><td class="right mono">₹${currentPayable.toLocaleString('en-IN')}</td></tr>
             <tr><td>Previous Balance (Carried Forward)</td><td class="right mono">₹${oldBalance.toLocaleString('en-IN')}</td></tr>
             <tr><td><strong>Total Due</strong></td><td class="right mono"><strong>₹${totalDue.toLocaleString('en-IN')}</strong></td></tr>
             <tr><td>Amount Collected</td><td class="right mono" style="color:#15803d;">₹${currentCollected.toLocaleString('en-IN')}</td></tr>
@@ -3111,10 +3167,12 @@ async function printHRReport() {
         }
         const collections = collData || [];
 
+        const rateHistory = await loadRateHistory(true);
         const summary = {};
         (staffData || []).forEach(s => {
             summary[s.staff_id] = {
                 staff_id: s.staff_id,
+                earned: 0,
                 name: s.name,
                 role: s.role || '—',
                 department: s.department || '—',
@@ -3134,6 +3192,7 @@ async function printHRReport() {
             else if (st === 'absent') s.absent++;
             else if (st === 'leave') s.leave++;
             else if (st === 'week_off') s.week_off++;
+            if (st === 'present' || st === 'week_off') s.earned += rateOnDate(rateHistory, a.staff_id, a.date, s.daily_rate);
             s.totalRecords++;
             const hrs = calculateWorkingHours(a.check_in, a.check_out);
             if (hrs !== null) s.totalHours += hrs;
@@ -3147,7 +3206,7 @@ async function printHRReport() {
         });
 
         Object.values(summary).forEach(s => {
-            s.payable = (s.present + s.week_off) * s.daily_rate;
+            s.payable = s.earned;
             s.balance = Math.max(0, s.payable - s.collected);
         });
 
@@ -3667,6 +3726,10 @@ function openEditStaff(staff) {
     document.getElementById('editStaffDept').value = staff.department || '';
     document.getElementById('editStaffJoined').value = staff.joined_date || '';
     document.getElementById('editStaffRate').value = staff.daily_rate ?? '';
+    document.getElementById('editStaffRate').dataset.orig = staff.daily_rate ?? '';
+    const _n = new Date();
+    document.getElementById('editStaffRateFrom').value =
+        `${_n.getFullYear()}-${String(_n.getMonth() + 1).padStart(2, '0')}-${String(_n.getDate()).padStart(2, '0')}`;
 
     document.getElementById('editStaffModal').classList.add('show');
 }
@@ -3688,6 +3751,41 @@ async function saveStaffEdit() {
     if (!payload.name) {
         showGlobalStatus('Staff name cannot be empty.', 'error');
         return;
+    }
+
+    // If the rate changed, record it in the history first so old entries keep the old rate
+    const rateEl = document.getElementById('editStaffRate');
+    const oldRate = rateEl.dataset.orig !== '' ? Number(rateEl.dataset.orig) : null;
+    const newRate = payload.daily_rate;
+    if ((newRate || 0) !== (oldRate || 0)) {
+        const staffCode = document.getElementById('editStaffCode').value;
+        const effFrom = document.getElementById('editStaffRateFrom').value;
+        if (!effFrom) {
+            showGlobalStatus('Please choose the date the new rate applies from.', 'error');
+            return;
+        }
+        try {
+            const { data: existing, error: hErr } = await _supabase
+                .from('staff_rate_history')
+                .select('id')
+                .eq('staff_id', staffCode)
+                .limit(1);
+            if (hErr) throw hErr;
+            const rows = [];
+            if (!existing || !existing.length) {
+                rows.push({ staff_id: staffCode, daily_rate: oldRate || 0, effective_from: '1970-01-01' });
+            }
+            rows.push({ staff_id: staffCode, daily_rate: newRate || 0, effective_from: effFrom });
+            const { error: upErr } = await _supabase
+                .from('staff_rate_history')
+                .upsert(rows, { onConflict: 'staff_id,effective_from' });
+            if (upErr) throw upErr;
+            _rateHistoryCache = null;
+        } catch (err) {
+            console.error('Rate history error:', err);
+            showGlobalStatus('Could not save rate history (create the staff_rate_history table first): ' + err.message, 'error');
+            return;
+        }
     }
 
     try {
@@ -3878,6 +3976,9 @@ async function loadSalaryData() {
 
         if (staffErr) throw staffErr;
         allStaffList = staffData || [];
+        const rateHistory = await loadRateHistory(true);
+        const curRate = {};
+        allStaffList.forEach(st => { curRate[st.staff_id] = st.daily_rate; });
 
         const { data: attData, error: attErr } = await _supabase
             .from('attendance')
@@ -3923,10 +4024,11 @@ async function loadSalaryData() {
         const prevSummary = {};
         (prevAttData || []).forEach(a => {
             const key = a.staff_id;
-            if (!prevSummary[key]) prevSummary[key] = { present: 0, week_off: 0 };
+            if (!prevSummary[key]) prevSummary[key] = { present: 0, week_off: 0, earned: 0 };
             const s = normalizeStatus(a.status);
             if (s === 'present') prevSummary[key].present++;
             else if (s === 'week_off') prevSummary[key].week_off++;
+            if (s === 'present' || s === 'week_off') prevSummary[key].earned += rateOnDate(rateHistory, key, a.date, curRate[key]);
         });
 
         const prevCollected = {};
@@ -3937,9 +4039,8 @@ async function loadSalaryData() {
 
         const previousDues = {};
         allStaffList.forEach(s => {
-            const rate = Number(s.daily_rate || 0);
-            const prev = prevSummary[s.staff_id] || { present: 0, week_off: 0 };
-            const prevPayable = (prev.present + prev.week_off) * rate;
+            const prev = prevSummary[s.staff_id] || { present: 0, week_off: 0, earned: 0 };
+            const prevPayable = prev.earned;
             const prevPaid = prevCollected[s.staff_id] || 0;
             const due = Math.max(0, prevPayable - prevPaid);
             if (due > 0) previousDues[s.staff_id] = due;
@@ -3955,6 +4056,7 @@ async function loadSalaryData() {
                 daily_rate: Number(s.daily_rate || 0),
                 present: 0,
                 week_off: 0,
+                earned: 0,
             };
         });
 
@@ -3963,11 +4065,12 @@ async function loadSalaryData() {
                 const s = normalizeStatus(a.status);
                 if (s === 'present') summary[a.staff_id].present++;
                 else if (s === 'week_off') summary[a.staff_id].week_off++;
+                if (s === 'present' || s === 'week_off') summary[a.staff_id].earned += rateOnDate(rateHistory, a.staff_id, a.date, summary[a.staff_id].daily_rate);
             }
         });
 
         salaryData = Object.values(summary).map(item => {
-            const payable = (item.present + item.week_off) * item.daily_rate;
+            const payable = item.earned;
             const prevDue = previousDues[item.staff_id] || 0;
             const collected = collections
                 .filter(c => c.staff_id === item.staff_id)
@@ -4406,15 +4509,16 @@ async function printSalaryStatement() {
     const prevLastDayDate = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth() + 1, 0);
     const prevLastDay = `${prevMonthValue}-${String(prevLastDayDate.getDate()).padStart(2, '0')}`;
 
-    let prevPresent = 0, prevWeekOff = 0, prevCollected = 0;
+    let prevPresent = 0, prevWeekOff = 0, prevCollected = 0, prevAttRows = [];
     try {
         const { data: prevAtt } = await _supabase
             .from('attendance')
-            .select('status')
+            .select('date, status')
             .eq('staff_id', staffCode)
             .gte('date', prevFirstDay)
             .lte('date', prevLastDay);
 
+        prevAttRows = prevAtt || [];
         (prevAtt || []).forEach(a => {
             const s = normalizeStatus(a.status);
             if (s === 'present') prevPresent++;
@@ -4435,7 +4539,8 @@ async function printSalaryStatement() {
     }
 
     const dailyRate = Number(staff.daily_rate || 0);
-    const prevPayable = (prevPresent + prevWeekOff) * dailyRate;
+    const stmtHistory = await loadRateHistory();
+    const prevPayable = sumPayable(stmtHistory, staffCode, prevAttRows, dailyRate);
     const oldBalance = Math.max(0, prevPayable - prevCollected);
 
     const currentPayable = staff.payable;
