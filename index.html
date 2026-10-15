@@ -440,6 +440,61 @@
     .toggle.active { background: #2563eb; }
     .toggle.active::after { left: 25px; }
 
+    /* ================= FACE ATTENDANCE ================= */
+    .action-btn.face.enrolled { background: #dcfce7; }
+    .action-btn.face:hover { background: #ede9fe; }
+
+    .enroll-cam {
+        width: 100%; aspect-ratio: 4 / 3; max-height: 330px;
+        background: #0f172a; border-radius: 14px; overflow: hidden;
+        margin-bottom: 12px; display: flex; justify-content: center;
+    }
+    .enroll-cam video { height: 100%; width: 100%; object-fit: cover; transform: scaleX(-1); }
+    .enroll-status { font-size: 14px; font-weight: 600; color: #1d4ed8; min-height: 22px; text-align: center; }
+    .enroll-status.error { color: #dc2626; }
+    .enroll-status.ok { color: #16a34a; }
+    .enroll-progress { height: 8px; background: #e2e8f0; border-radius: 99px; margin-top: 10px; overflow: hidden; }
+    .enroll-progress div { height: 100%; width: 0; background: linear-gradient(90deg, #2563eb, #7c3aed); transition: width 0.3s; }
+
+    .kiosk {
+        display: none; position: fixed; inset: 0; z-index: 5000;
+        background: #0b1220; color: white; flex-direction: column;
+        padding: env(safe-area-inset-top, 0px) 16px env(safe-area-inset-bottom, 0px);
+    }
+    .kiosk.show { display: flex; }
+    .kiosk-top { display: flex; justify-content: space-between; align-items: center; padding: 14px 4px; gap: 12px; }
+    .kiosk-title { font-size: 18px; font-weight: 700; }
+    .kiosk-clock { font-size: 13px; opacity: 0.7; margin-top: 2px; }
+    .kiosk-top-actions { display: flex; align-items: center; gap: 12px; }
+    .kiosk-toggle { font-size: 12px; opacity: 0.85; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .kiosk-exit {
+        background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.25);
+        border-radius: 9px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .kiosk-stage {
+        flex: 1; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 18px; min-height: 0; text-align: center;
+    }
+    .kiosk-ring {
+        width: min(72vw, 340px); aspect-ratio: 1; border-radius: 50%;
+        border: 7px solid #475569; overflow: hidden; background: #000;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .kiosk-ring video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    .kiosk-ring.idle { border-color: #475569; }
+    .kiosk-ring.wait { border-color: #f59e0b; box-shadow: 0 0 40px rgba(245,158,11,0.35); }
+    .kiosk-ring.ok   { border-color: #22c55e; box-shadow: 0 0 50px rgba(34,197,94,0.5); }
+    .kiosk-ring.fail { border-color: #ef4444; box-shadow: 0 0 50px rgba(239,68,68,0.45); }
+    .kiosk-status { font-size: 18px; font-weight: 600; min-height: 26px; padding: 0 10px; }
+    .kiosk-result { min-height: 64px; }
+    .kiosk-result .kr-name { font-size: 26px; font-weight: 800; }
+    .kiosk-result .kr-line { font-size: 16px; opacity: 0.9; margin-top: 4px; }
+    .kiosk-recent { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0 14px; }
+    .kiosk-recent .chip {
+        flex-shrink: 0; background: rgba(255,255,255,0.1); border-radius: 99px;
+        padding: 6px 12px; font-size: 12px; white-space: nowrap;
+    }
+
     /* ================= SALARY COUNTDOWN ================= */
     .salary-countdown {
         display: flex; align-items: center; gap: 18px;
@@ -945,6 +1000,7 @@ Kerala, India</textarea>
                 <div><h2>Attendance</h2><p>Track daily and monthly staff attendance</p></div>
                 <div class="page-head-actions">
                     <button class="hr-btn" onclick="printHRReport()">📄 HR Department Report</button>
+                    <button class="hr-btn" onclick="openFaceKiosk()">🙂 Face Attendance</button>
                     <button class="primary-btn" onclick="markAttendance()">🕒 Mark Attendance</button>
                 </div>
             </div>
@@ -1171,6 +1227,42 @@ Kerala, India</textarea>
             <button class="primary-btn" onclick="saveAttendance()" id="markSaveBtn">🕒 Save Attendance</button>
         </div>
     </div>
+</div>
+
+<!-- ================= FACE ENROLL MODAL ================= -->
+<div class="modal-backdrop" id="faceEnrollModal">
+    <div class="modal">
+        <h3 id="faceEnrollTitle">Enroll Face</h3>
+        <p class="modal-sub">Captures 5 quick samples of the face for attendance. Only numeric face data is stored, not photos.</p>
+        <div class="enroll-cam"><video id="enrollVideo" playsinline muted autoplay></video></div>
+        <div class="enroll-status" id="enrollStatus">Preparing…</div>
+        <div class="enroll-progress"><div id="enrollBar"></div></div>
+        <div class="modal-actions">
+            <button class="btn-secondary" id="enrollRemoveBtn" style="display:none;" onclick="removeFaceData()">🗑️ Remove</button>
+            <button class="btn-secondary" onclick="closeFaceEnroll()">Close</button>
+            <button class="primary-btn" id="enrollStartBtn" onclick="startFaceCapture()" disabled>📸 Start Capture</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= FACE ATTENDANCE KIOSK ================= -->
+<div class="kiosk" id="faceKiosk">
+    <div class="kiosk-top">
+        <div>
+            <div class="kiosk-title">🙂 Face Attendance</div>
+            <div class="kiosk-clock" id="kioskClock"></div>
+        </div>
+        <div class="kiosk-top-actions">
+            <label class="kiosk-toggle"><input type="checkbox" id="kioskBlinkToggle" checked> Blink check</label>
+            <button class="kiosk-exit" onclick="closeFaceKiosk()">✕ Exit</button>
+        </div>
+    </div>
+    <div class="kiosk-stage">
+        <div class="kiosk-ring idle" id="kioskRing"><video id="kioskVideo" playsinline muted autoplay></video></div>
+        <div class="kiosk-status" id="kioskStatus">Starting…</div>
+        <div class="kiosk-result" id="kioskResult"></div>
+    </div>
+    <div class="kiosk-recent" id="kioskRecent"></div>
 </div>
 
 <!-- ================= ADD STAFF MODAL ================= -->
@@ -2222,7 +2314,15 @@ async function loadStaff() {
             return;
         }
 
+        let enrolledFaces = new Set();
+        try {
+            const { data: faceRows } = await _supabase.from('staff_faces').select('staff_id');
+            if (faceRows) enrolledFaces = new Set(faceRows.map(r => r.staff_id));
+        } catch (e) { /* face table not created yet — ignore */ }
+
         tbody.innerHTML = data.map(s => {
+            const faceSid = s.staff_id || s.id;
+            const faceOn = enrolledFaces.has(faceSid);
             const initials = (s.name || '??').split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase();
             const exp = calculateExperience(s.joined_date);
             const expLabel = formatExperience(exp);
@@ -2238,6 +2338,7 @@ async function loadStaff() {
                 <td><span class="${expClass}" title="${escapeHtml(expTitle)}">📅 ${expLabel}</span></td>
                 <td>${s.daily_rate != null ? '₹' + s.daily_rate : '—'}</td>
                 <td style="text-align:right;white-space:nowrap;">
+                    <button class="action-btn face${faceOn ? ' enrolled' : ''}" title="${faceOn ? 'Face enrolled — click to re-enroll' : 'Enroll face for attendance'}" data-sid="${escapeHtml(String(faceSid))}" data-name="${escapeHtml(s.name || '')}" onclick="openFaceEnroll(this.dataset.sid, this.dataset.name)">🙂</button>
                     <button class="action-btn edit" title="Edit" onclick='openEditStaff(${JSON.stringify(s)})'>✏️</button>
                     <button class="action-btn delete" title="Delete" onclick='openDeleteStaff(${JSON.stringify(s)})'>🗑️</button>
                 </td>
@@ -4948,6 +5049,499 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 });
+/* ================================================================
+   FACE ATTENDANCE (browser-side face recognition)
+   ================================================================ */
+const FACE_LIB_URL   = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js';
+const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
+const FACE_MATCH_THRESHOLD = 0.45;  // max distance to accept a match (lower = stricter)
+const FACE_MATCH_MARGIN    = 0.05;  // best match must beat the runner-up by this much
+const FACE_DUPLICATE_DIST  = 0.40;  // blocks enrolling a face already enrolled for someone else
+const FACE_SAMPLES_NEEDED  = 5;
+const FACE_MIN_GAP_MIN     = 2;     // minutes between check-in and check-out
+const FACE_REPEAT_SECONDS  = 20;    // ignore the same person scanning again within this time
+const EAR_OPEN = 0.25, EAR_CLOSED = 0.21;
+
+let faceLibPromise = null;
+
+function faceSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function faceLocalDate(d = new Date()) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function faceTimeLabel(iso) {
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function loadFaceLib() {
+    if (faceLibPromise) return faceLibPromise;
+    faceLibPromise = new Promise((resolve, reject) => {
+        const sc = document.createElement('script');
+        sc.src = FACE_LIB_URL;
+        sc.onload = async () => {
+            try {
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(FACE_MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL)
+                ]);
+                resolve();
+            } catch (e) { reject(e); }
+        };
+        sc.onerror = () => reject(new Error('Could not load the face library. Check the internet connection.'));
+        document.head.appendChild(sc);
+    }).catch(e => { faceLibPromise = null; throw e; });
+    return faceLibPromise;
+}
+
+async function startFaceCamera(videoEl) {
+    if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera needs a secure page. Open the app using https://');
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false
+    });
+    videoEl.srcObject = stream;
+    await videoEl.play();
+    return stream;
+}
+
+function stopFaceCamera(stream, videoEl) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (videoEl) videoEl.srcObject = null;
+}
+
+function faceDetectorOptions() {
+    return new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+}
+
+function faceDist(a, b) {
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) { const d = a[i] - b[i]; sum += d * d; }
+    return Math.sqrt(sum);
+}
+
+function eyeAspectRatio(pts) {
+    const d = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    return (d(pts[1], pts[5]) + d(pts[2], pts[4])) / (2 * d(pts[0], pts[3]));
+}
+
+function faceEAR(landmarks) {
+    return (eyeAspectRatio(landmarks.getLeftEye()) + eyeAspectRatio(landmarks.getRightEye())) / 2;
+}
+
+function faceBeep(ok) {
+    try {
+        if (!faceBeep.ctx) faceBeep.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = faceBeep.ctx, osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.frequency.value = ok ? 880 : 220;
+        gain.gain.value = 0.08;
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + (ok ? 0.15 : 0.3));
+    } catch (e) { /* sound is optional */ }
+    if (navigator.vibrate) navigator.vibrate(ok ? 80 : [60, 60, 60]);
+}
+
+/* ---------------- ENROLLMENT ---------------- */
+const enroll = { staffId: null, name: '', stream: null, running: false };
+
+async function openFaceEnroll(staffId, name) {
+    enroll.staffId = staffId;
+    enroll.name = name || staffId;
+    enroll.running = false;
+
+    document.getElementById('faceEnrollTitle').textContent = 'Enroll Face — ' + enroll.name;
+    document.getElementById('enrollBar').style.width = '0%';
+    document.getElementById('enrollStartBtn').disabled = true;
+    document.getElementById('enrollRemoveBtn').style.display = 'none';
+    setEnrollStatus('Loading face models…');
+    document.getElementById('faceEnrollModal').classList.add('show');
+
+    try {
+        const { data: existing } = await _supabase
+            .from('staff_faces').select('staff_id').eq('staff_id', staffId).maybeSingle();
+        if (existing) document.getElementById('enrollRemoveBtn').style.display = '';
+
+        await loadFaceLib();
+        enroll.stream = await startFaceCamera(document.getElementById('enrollVideo'));
+        setEnrollStatus('Camera ready. Click “Start Capture”.');
+        document.getElementById('enrollStartBtn').disabled = false;
+    } catch (err) {
+        console.error('Face enroll init error:', err);
+        setEnrollStatus(err.message || 'Could not start the camera.', 'error');
+    }
+}
+
+function setEnrollStatus(msg, kind) {
+    const el = document.getElementById('enrollStatus');
+    el.textContent = msg;
+    el.className = 'enroll-status' + (kind ? ' ' + kind : '');
+}
+
+function closeFaceEnroll() {
+    enroll.running = false;
+    stopFaceCamera(enroll.stream, document.getElementById('enrollVideo'));
+    enroll.stream = null;
+    document.getElementById('faceEnrollModal').classList.remove('show');
+}
+
+async function startFaceCapture() {
+    if (enroll.running || !enroll.stream) return;
+    enroll.running = true;
+
+    const btn = document.getElementById('enrollStartBtn');
+    const video = document.getElementById('enrollVideo');
+    btn.disabled = true;
+
+    const prompts = [
+        'Look straight at the camera',
+        'Turn your head slightly left',
+        'Turn your head slightly right',
+        'Tilt your chin slightly up',
+        'Look straight and relax'
+    ];
+    const samples = [];
+
+    try {
+        for (let i = 0; i < FACE_SAMPLES_NEEDED; i++) {
+            setEnrollStatus(`(${i + 1}/${FACE_SAMPLES_NEEDED}) ${prompts[i]}`);
+            await faceSleep(i === 0 ? 600 : 1200);
+
+            let got = null;
+            const deadline = Date.now() + 9000;
+            while (enroll.running && Date.now() < deadline && !got) {
+                const det = await faceapi.detectSingleFace(video, faceDetectorOptions())
+                    .withFaceLandmarks().withFaceDescriptor();
+                if (!det) { setEnrollStatus('No face found — look at the camera', 'error'); await faceSleep(250); continue; }
+                if (det.detection.score < 0.6) { await faceSleep(200); continue; }
+                if (det.detection.box.width / video.videoWidth < 0.25) { setEnrollStatus('Move a little closer', 'error'); await faceSleep(250); continue; }
+                if (faceEAR(det.landmarks) < 0.2) { await faceSleep(150); continue; } // eyes closed
+                got = det;
+            }
+            if (!enroll.running) return;
+            if (!got) throw new Error('Could not see the face clearly. Improve the lighting and try again.');
+
+            samples.push(Array.from(got.descriptor, v => Math.round(v * 1e5) / 1e5));
+            document.getElementById('enrollBar').style.width = Math.round(((i + 1) / FACE_SAMPLES_NEEDED) * 100) + '%';
+        }
+
+        setEnrollStatus('Saving…');
+
+        // Block enrolling a face that already belongs to another staff member
+        const { data: others, error: othErr } = await _supabase
+            .from('staff_faces').select('staff_id, descriptors').neq('staff_id', enroll.staffId);
+        if (othErr) throw othErr;
+        for (const row of (others || [])) {
+            let best = 9;
+            for (const d1 of samples) for (const d2 of row.descriptors) best = Math.min(best, faceDist(d1, d2));
+            if (best < FACE_DUPLICATE_DIST) {
+                throw new Error('This face is already enrolled for staff ID ' + row.staff_id + '.');
+            }
+        }
+
+        const { error } = await _supabase.from('staff_faces').upsert(
+            { staff_id: enroll.staffId, descriptors: samples, updated_at: new Date().toISOString() },
+            { onConflict: 'staff_id' }
+        );
+        if (error) throw error;
+
+        faceBeep(true);
+        setEnrollStatus('✅ Face enrolled successfully.', 'ok');
+        document.getElementById('enrollRemoveBtn').style.display = '';
+        loadStaff();
+    } catch (err) {
+        console.error('Face capture error:', err);
+        let msg = err.message || String(err);
+        if (err && (err.code === '42P01' || err.code === 'PGRST205' || /staff_faces/.test(msg))) {
+            msg = 'The "staff_faces" table does not exist yet. Run staff_faces.sql in Supabase first.';
+        }
+        setEnrollStatus(msg, 'error');
+    } finally {
+        enroll.running = false;
+        btn.disabled = false;
+        btn.textContent = '📸 Capture Again';
+    }
+}
+
+async function removeFaceData() {
+    if (!enroll.staffId) return;
+    if (!confirm('Remove the saved face data for ' + enroll.name + '?')) return;
+    const { error } = await _supabase.from('staff_faces').delete().eq('staff_id', enroll.staffId);
+    if (error) { setEnrollStatus('Could not remove: ' + error.message, 'error'); return; }
+    document.getElementById('enrollRemoveBtn').style.display = 'none';
+    setEnrollStatus('Face data removed.', 'ok');
+    loadStaff();
+}
+
+/* ---------------- KIOSK ---------------- */
+const kiosk = {
+    running: false, busy: false, stream: null, timer: null, clockTimer: null, wake: null,
+    pauseUntil: 0, enrolled: [], names: {}, lastSeen: {}, recent: [],
+    blink: { sawOpen: false, sawClosed: false, since: 0 }
+};
+
+function kioskBlinkReset() { kiosk.blink = { sawOpen: false, sawClosed: false, since: 0 }; }
+
+function setKioskState(state, text) {
+    document.getElementById('kioskRing').className = 'kiosk-ring ' + state;
+    if (text !== undefined) document.getElementById('kioskStatus').textContent = text;
+}
+
+function kioskShowResult(html) { document.getElementById('kioskResult').innerHTML = html; }
+
+function renderKioskRecent() {
+    document.getElementById('kioskRecent').innerHTML = kiosk.recent
+        .map(r => `<span class="chip">${r.action === 'in' ? '🟢 IN' : '🔴 OUT'} · ${escapeHtml(r.name)} · ${r.time}</span>`)
+        .join('');
+}
+
+async function kioskWake() {
+    try { if ('wakeLock' in navigator) kiosk.wake = await navigator.wakeLock.request('screen'); } catch (e) { /* optional */ }
+}
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && kiosk.running) kioskWake();
+});
+
+async function openFaceKiosk() {
+    const overlay = document.getElementById('faceKiosk');
+    overlay.classList.add('show');
+    kiosk.running = true;
+    kiosk.busy = false;
+    kiosk.pauseUntil = 0;
+    kiosk.lastSeen = {};
+    kioskBlinkReset();
+    kioskShowResult('');
+    setKioskState('wait', 'Loading face models…');
+    faceBeep.ctx && faceBeep.ctx.resume && faceBeep.ctx.resume();
+
+    const tickClock = () => {
+        document.getElementById('kioskClock').textContent =
+            new Date().toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    };
+    tickClock();
+    kiosk.clockTimer = setInterval(tickClock, 30000);
+
+    try {
+        await loadFaceLib();
+
+        const [facesRes, staffRes] = await Promise.all([
+            _supabase.from('staff_faces').select('staff_id, descriptors'),
+            _supabase.from('staff').select('staff_id, name')
+        ]);
+        if (facesRes.error) throw facesRes.error;
+        if (staffRes.error) throw staffRes.error;
+
+        kiosk.names = {};
+        (staffRes.data || []).forEach(s => { kiosk.names[s.staff_id] = s.name || s.staff_id; });
+        kiosk.enrolled = (facesRes.data || []).map(r => ({
+            staff_id: r.staff_id,
+            name: kiosk.names[r.staff_id] || r.staff_id,
+            descs: r.descriptors
+        }));
+
+        if (!kiosk.enrolled.length) {
+            setKioskState('fail', 'No faces enrolled yet. Enroll staff from Staff Details (🙂).');
+            return;
+        }
+
+        kiosk.stream = await startFaceCamera(document.getElementById('kioskVideo'));
+        kioskWake();
+        setKioskState('idle', 'Show your face to the camera');
+        faceKioskTick();
+    } catch (err) {
+        console.error('Kiosk start error:', err);
+        let msg = err.message || String(err);
+        if (err && (err.code === '42P01' || err.code === 'PGRST205' || /staff_faces/.test(msg))) {
+            msg = 'The "staff_faces" table does not exist yet. Run staff_faces.sql in Supabase first.';
+        }
+        setKioskState('fail', msg);
+    }
+}
+
+function closeFaceKiosk() {
+    kiosk.running = false;
+    clearTimeout(kiosk.timer);
+    clearInterval(kiosk.clockTimer);
+    stopFaceCamera(kiosk.stream, document.getElementById('kioskVideo'));
+    kiosk.stream = null;
+    if (kiosk.wake) { try { kiosk.wake.release(); } catch (e) {} kiosk.wake = null; }
+    document.getElementById('faceKiosk').classList.remove('show');
+
+    // refresh attendance views with what the kiosk recorded
+    try { loadAttendance(); loadDashboard(); } catch (e) { /* ignore */ }
+}
+
+async function faceKioskTick() {
+    if (!kiosk.running) return;
+    let delay = 150;
+
+    try {
+        if (kiosk.busy || performance.now() < kiosk.pauseUntil) {
+            delay = 200;
+        } else {
+            const video = document.getElementById('kioskVideo');
+            const det = await faceapi.detectSingleFace(video, faceDetectorOptions()).withFaceLandmarks();
+
+            if (!det) {
+                kioskBlinkReset();
+                setKioskState('idle', 'Show your face to the camera');
+                kioskShowResult('');
+                delay = 250;
+            } else if (det.detection.box.width / video.videoWidth < 0.22) {
+                setKioskState('wait', 'Please come a little closer');
+            } else {
+                const requireBlink = document.getElementById('kioskBlinkToggle').checked;
+                if (!requireBlink) {
+                    await kioskRecognize();
+                    delay = 400;
+                } else {
+                    const b = kiosk.blink;
+                    const now = performance.now();
+                    if (!b.since) b.since = now;
+                    if (now - b.since > 10000) { kioskBlinkReset(); kiosk.blink.since = now; }
+
+                    const ear = faceEAR(det.landmarks);
+                    let blinked = false;
+                    if (ear > EAR_OPEN) {
+                        if (b.sawOpen && b.sawClosed) blinked = true; else b.sawOpen = true;
+                    } else if (ear < EAR_CLOSED && b.sawOpen) {
+                        b.sawClosed = true;
+                    }
+
+                    if (blinked) {
+                        await kioskRecognize();
+                        delay = 400;
+                    } else {
+                        setKioskState('wait', 'Look at the camera and blink 👁️');
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        console.warn('Kiosk tick error:', err);
+        delay = 600;
+    }
+
+    kiosk.timer = setTimeout(faceKioskTick, delay);
+}
+
+function matchFace(descriptor) {
+    const ranked = kiosk.enrolled.map(st => {
+        let best = 9;
+        for (const d of st.descs) best = Math.min(best, faceDist(descriptor, d));
+        return { st, d: best };
+    }).sort((a, b) => a.d - b.d);
+
+    if (!ranked.length || ranked[0].d >= FACE_MATCH_THRESHOLD) return null;
+    if (ranked.length > 1 && ranked[1].d - ranked[0].d < FACE_MATCH_MARGIN) return null;
+    return ranked[0].st;
+}
+
+async function kioskRecognize() {
+    kiosk.busy = true;
+    setKioskState('wait', 'Checking…');
+    try {
+        const video = document.getElementById('kioskVideo');
+        const full = await faceapi.detectSingleFace(video, faceDetectorOptions())
+            .withFaceLandmarks().withFaceDescriptor();
+        if (!full) return;
+
+        const staff = matchFace(full.descriptor);
+        if (!staff) {
+            faceBeep(false);
+            setKioskState('fail', 'Face not recognized');
+            kioskShowResult('<div class="kr-line">Try again, or ask the admin to enroll your face.</div>');
+            kiosk.pauseUntil = performance.now() + 3000;
+        } else {
+            await kioskMarkAttendance(staff);
+        }
+    } catch (err) {
+        console.error('Recognize error:', err);
+        setKioskState('fail', 'Error: ' + (err.message || err));
+        kiosk.pauseUntil = performance.now() + 3000;
+    } finally {
+        kioskBlinkReset();
+        kiosk.busy = false;
+    }
+}
+
+async function kioskMarkAttendance(staff) {
+    const now = new Date();
+    const nameHtml = `<div class="kr-name">${escapeHtml(staff.name)}</div>`;
+
+    // same person scanning again right away
+    const last = kiosk.lastSeen[staff.staff_id] || 0;
+    if (Date.now() - last < FACE_REPEAT_SECONDS * 1000) {
+        setKioskState('ok', 'Already recorded');
+        kioskShowResult(nameHtml);
+        kiosk.pauseUntil = performance.now() + 2500;
+        return;
+    }
+
+    const date = faceLocalDate(now);
+    const { data: row, error } = await _supabase
+        .from('attendance')
+        .select('id, status, check_in, check_out')
+        .eq('staff_id', staff.staff_id)
+        .eq('date', date)
+        .maybeSingle();
+    if (error) throw error;
+
+    let action;
+    if (!row || !row.check_in) {
+        action = 'in';
+    } else if (!row.check_out) {
+        const mins = (now - new Date(row.check_in)) / 60000;
+        if (mins < FACE_MIN_GAP_MIN) {
+            kiosk.lastSeen[staff.staff_id] = Date.now();
+            setKioskState('ok', 'Already checked in at ' + faceTimeLabel(row.check_in));
+            kioskShowResult(nameHtml);
+            kiosk.pauseUntil = performance.now() + 3000;
+            return;
+        }
+        action = 'out';
+    } else {
+        kiosk.lastSeen[staff.staff_id] = Date.now();
+        setKioskState('ok', 'Already checked out at ' + faceTimeLabel(row.check_out));
+        kioskShowResult(nameHtml);
+        kiosk.pauseUntil = performance.now() + 3000;
+        return;
+    }
+
+    const nowIso = now.toISOString();
+    const payload = {
+        staff_id: staff.staff_id,
+        date: date,
+        status: 'present',
+        check_in: action === 'in' ? nowIso : row.check_in,
+        check_out: action === 'out' ? nowIso : null
+    };
+
+    const { error: upErr } = await _supabase
+        .from('attendance').upsert([payload], { onConflict: 'staff_id,date' });
+    if (upErr) throw upErr;
+
+    kiosk.lastSeen[staff.staff_id] = Date.now();
+    faceBeep(true);
+
+    let line;
+    if (action === 'in') {
+        line = 'Checked IN at ' + faceTimeLabel(nowIso);
+    } else {
+        const hrs = calculateWorkingHours(row.check_in, nowIso);
+        line = 'Checked OUT at ' + faceTimeLabel(nowIso) + (hrs !== null ? ' · ' + formatHours(hrs) : '');
+    }
+    setKioskState('ok', action === 'in' ? 'Welcome! ✅' : 'Goodbye! 👋');
+    kioskShowResult(nameHtml + `<div class="kr-line">${escapeHtml(line)}</div>`);
+
+    kiosk.recent.unshift({ name: staff.name, action, time: faceTimeLabel(nowIso) });
+    kiosk.recent = kiosk.recent.slice(0, 6);
+    renderKioskRecent();
+    kiosk.pauseUntil = performance.now() + 3500;
+}
+
 </script>
 
 </body>
