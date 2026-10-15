@@ -1973,6 +1973,7 @@ async function doAdminLogin() {
     updateAdminLabels(data.user.email);
 
     await loadDashboard();
+    loadSalaryDayFromDb();
     setTimeout(() => loadCompany(), 300);
     setTimeout(() => loadStaff(), 600);
     setTimeout(() => loadAttendance(), 900);
@@ -3994,7 +3995,7 @@ function toggleDarkMode(element) {
     document.body.classList.toggle("dark-mode");
 }
 
-function saveSettings() {
+async function saveSettings() {
     const dayInput = document.getElementById('salaryDayInput');
     const dayRaw = dayInput ? dayInput.value.trim() : '';
     let salaryDay = null;
@@ -4012,17 +4013,80 @@ function saveSettings() {
     const states = Array.from(toggles).map(t => t.classList.contains('active'));
     localStorage.setItem('staffpro_settings', JSON.stringify(states));
 
+    // local cache (instant load + fallback if the database is unreachable)
     if (salaryDay === null) localStorage.removeItem(SALARY_DAY_KEY);
     else localStorage.setItem(SALARY_DAY_KEY, String(salaryDay));
 
     updateSalaryCountdown();
-    showGlobalStatus('Settings saved locally.', 'success');
+
+    try {
+        await saveSalaryDayToDb(salaryDay);
+        showGlobalStatus('Settings saved. Salary date stored in the database.', 'success');
+    } catch (err) {
+        console.error('Salary date save error:', err);
+        showGlobalStatus('Salary date saved on this device only — database error: ' + friendlySettingsError(err), 'error');
+    }
 }
 
 /* ================================================================
    SALARY DATE + COUNTDOWN
    ================================================================ */
 const SALARY_DAY_KEY = 'staffpro_salary_day';
+
+const SALARY_DAY_DB_KEY = 'salary_day';
+
+function friendlySettingsError(err) {
+    const msg = (err && err.message) || String(err);
+    if (err && (err.code === '42P01' || err.code === 'PGRST205' || /salary_settings/.test(msg))) {
+        return 'the "salary_settings" table does not exist yet. Run the SQL setup in Supabase first.';
+    }
+    return msg;
+}
+
+async function saveSalaryDayToDb(salaryDay) {
+    if (salaryDay === null) {
+        const { error } = await _supabase
+            .from('salary_settings')
+            .delete()
+            .eq('key', SALARY_DAY_DB_KEY);
+        if (error) throw error;
+        return;
+    }
+
+    const { error } = await _supabase
+        .from('salary_settings')
+        .upsert(
+            { key: SALARY_DAY_DB_KEY, value: String(salaryDay), updated_at: new Date().toISOString() },
+            { onConflict: 'key' }
+        );
+    if (error) throw error;
+}
+
+// Pull the saved salary date from the database (source of truth) and refresh the UI
+async function loadSalaryDayFromDb() {
+    try {
+        const { data, error } = await _supabase
+            .from('salary_settings')
+            .select('value')
+            .eq('key', SALARY_DAY_DB_KEY)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        const n = data ? parseInt(data.value, 10) : NaN;
+        if (Number.isInteger(n) && n >= 1 && n <= 31) {
+            localStorage.setItem(SALARY_DAY_KEY, String(n));
+        } else if (data === null) {
+            localStorage.removeItem(SALARY_DAY_KEY);
+        }
+
+        const input = document.getElementById('salaryDayInput');
+        if (input) input.value = getSavedSalaryDay() ?? '';
+        updateSalaryCountdown();
+    } catch (err) {
+        console.warn('Salary date load failed, using local copy:', err);
+    }
+}
 
 function getSavedSalaryDay() {
     const n = parseInt(localStorage.getItem(SALARY_DAY_KEY), 10);
@@ -4870,6 +4934,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateAdminLabels(session.user.email);
 
         await loadDashboard();
+        loadSalaryDayFromDb();
         setTimeout(() => { loadCompany(); }, 800);
         setTimeout(() => { loadStaff(); }, 1200);
         setTimeout(() => { loadAttendance(); }, 1600);
