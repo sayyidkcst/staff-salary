@@ -1373,7 +1373,7 @@ Kerala, India</textarea>
 <div class="modal-backdrop" id="faceEnrollModal">
     <div class="modal">
         <h3 id="faceEnrollTitle">Enroll Face</h3>
-        <p class="modal-sub">Captures 5 quick samples of the face for attendance. Only numeric face data is stored, not photos. <span style="color:#94a3b8;">Build: face-v6 · table staff_face_descriptors</span></p>
+        <p class="modal-sub">Captures 5 quick samples of the face for attendance. Only numeric face data is stored, not photos. <span style="color:#94a3b8;">Build: face-v7 · table staff_face_descriptors</span></p>
         <div class="enroll-cam"><video id="enrollVideo" playsinline muted autoplay></video></div>
         <div class="enroll-status" id="enrollStatus">Preparing…</div>
         <div class="enroll-progress"><div id="enrollBar"></div></div>
@@ -2478,6 +2478,7 @@ async function loadStaff() {
                 <td><span class="${expClass}" title="${escapeHtml(expTitle)}">📅 ${expLabel}</span></td>
                 <td>${s.daily_rate != null ? '₹' + s.daily_rate : '—'}</td>
                 <td style="text-align:right;white-space:nowrap;">
+                    <button class="action-btn print" title="Print staff profile" data-sid="${escapeHtml(String(faceSid))}" onclick="printStaffProfile(this.dataset.sid)">🖨️</button>
                     <button class="action-btn face${faceOn ? ' enrolled' : ''}" title="${faceOn ? 'Face enrolled — click to re-enroll' : 'Enroll face for attendance'}" data-sid="${escapeHtml(String(faceSid))}" data-name="${escapeHtml(s.name || '')}" onclick="openFaceEnroll(this.dataset.sid, this.dataset.name)">🙂</button>
                     <button class="action-btn edit" title="Edit" onclick='openEditStaff(${JSON.stringify(s)})'>✏️</button>
                     <button class="action-btn delete" title="Delete" onclick='openDeleteStaff(${JSON.stringify(s)})'>🗑️</button>
@@ -2488,6 +2489,127 @@ async function loadStaff() {
         console.error('Staff load error:', err);
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;">Error loading staff data.</td></tr>';
         showGlobalStatus('Error loading staff: ' + err.message, 'error');
+    }
+}
+
+/* ================================================================
+   PRINT STAFF PROFILE — single employee record
+   ================================================================ */
+async function printStaffProfile(staffCode) {
+    showGlobalStatus('Preparing staff profile…', 'info');
+
+    let company = { name: 'StaffPro', address: '', phone: '', email: '' };
+    try {
+        const { data } = await _supabase.from('company').select('*').limit(1).maybeSingle();
+        if (data) company = data;
+    } catch (err) { console.warn('Company lookup failed:', err); }
+
+    try {
+        const { data: st, error } = await _supabase
+            .from('staff').select('*').eq('staff_id', staffCode).maybeSingle();
+        if (error) throw error;
+        if (!st) { showGlobalStatus('Staff record not found.', 'error'); return; }
+
+        const exp = calculateExperience(st.joined_date);
+        const expLabel = formatExperience(exp);
+        const fmtDate = (d) => d
+            ? new Date(d + 'T00:00:00').toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+            : '—';
+        const initials = (st.name || '??').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase();
+        const rate = st.daily_rate != null ? '₹' + st.daily_rate : '—';
+        const coName = company.name || 'StaffPro';
+
+        const printWindow = window.open('', '_blank', 'width=900,height=1000');
+        if (!printWindow) { showGlobalStatus('Please allow pop-ups to print.', 'error'); return; }
+
+        printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Staff Profile — ${escapeHtml(st.name || st.staff_id)}</title>
+    <style>${getPrintStyles()}
+        @page { size: A4 portrait; margin: 14mm; }
+        body { max-width: 800px; }
+        .profile-head { display: flex; align-items: center; gap: 18px; padding: 18px 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; margin-bottom: 20px; }
+        .profile-avatar { width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff; font-size: 26px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .profile-head h2 { font-size: 22px; margin: 0; color: #0f172a; }
+        .profile-head p { margin: 4px 0 0; color: #64748b; font-size: 13px; }
+        .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 22px; }
+        .detail-table th { width: 32%; text-align: left; background: #f1f5f9; color: #475569; padding: 11px 14px; border: 1px solid #e2e8f0; font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .detail-table td { padding: 11px 14px; border: 1px solid #e2e8f0; color: #0f172a; }
+    </style>
+</head>
+<body>
+    <div class="print-actions no-print">
+        <button onclick="window.print()">🖨️ Print Staff Profile</button>
+        <button class="secondary" onclick="window.close()">Close</button>
+    </div>
+
+    ${buildLetterhead(company)}
+
+    <div class="doc-title">
+        <h2>Employee Profile</h2>
+        <p>Staff Record Summary</p>
+    </div>
+
+    <div class="ref-bar">
+        <div><strong>Staff ID:</strong> ${escapeHtml(String(st.staff_id || '—'))}</div>
+        <div><strong>Printed On:</strong> ${new Date().toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+    </div>
+
+    <div class="profile-head">
+        <div class="profile-avatar">${escapeHtml(initials)}</div>
+        <div>
+            <h2>${escapeHtml(st.name || '—')}</h2>
+            <p>${escapeHtml(st.role || 'Role not set')}${st.department ? ' · ' + escapeHtml(st.department) : ''}</p>
+        </div>
+    </div>
+
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="stat-card accent"><div class="label">Staff ID</div><div class="value" style="font-size:18px;">${escapeHtml(String(st.staff_id || '—'))}</div></div>
+        <div class="stat-card success"><div class="label">Experience</div><div class="value" style="font-size:18px;">${escapeHtml(String(expLabel))}</div></div>
+        <div class="stat-card purple"><div class="label">Daily Rate</div><div class="value" style="font-size:18px;">${escapeHtml(rate)}</div></div>
+    </div>
+
+    <div class="section-header">
+        <div class="section-header-icon">👤</div>
+        <h3>Employment Details</h3>
+    </div>
+
+    <table class="detail-table">
+        <tr><th>Full Name</th><td>${escapeHtml(st.name || '—')}</td></tr>
+        <tr><th>Staff ID</th><td>${escapeHtml(String(st.staff_id || '—'))}</td></tr>
+        <tr><th>Role / Designation</th><td>${escapeHtml(st.role || '—')}</td></tr>
+        <tr><th>Department</th><td>${escapeHtml(st.department || '—')}</td></tr>
+        <tr><th>Joined Date</th><td>${escapeHtml(fmtDate(st.joined_date))}</td></tr>
+        <tr><th>Experience</th><td>${exp ? `${exp.years} years, ${exp.months} months, ${exp.days} days` : '—'}</td></tr>
+        <tr><th>Daily Rate</th><td>${escapeHtml(rate)}</td></tr>
+    </table>
+
+    <div class="signatures">
+        <div class="sig-block">
+            <div class="sig-name">HR Manager</div>
+            <div class="sig-role">Human Resources Department</div>
+        </div>
+        <div class="sig-block">
+            <div class="sig-name">Authorized Signatory</div>
+            <div class="sig-role">For ${escapeHtml(coName)}</div>
+        </div>
+    </div>
+
+    <div class="doc-footer">
+        This is a computer-generated staff profile issued by <strong>${escapeHtml(coName)}</strong>.
+        Confidential — For internal use only. Generated on ${new Date().toLocaleString()}.
+    </div>
+</body>
+</html>
+        `);
+        printWindow.document.close();
+        showGlobalStatus('Staff profile opened.', 'success');
+    } catch (err) {
+        console.error('Print staff profile error:', err);
+        showGlobalStatus('Could not print staff profile: ' + (err.message || err), 'error');
     }
 }
 
@@ -5205,7 +5327,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 /* ================================================================
    FACE ATTENDANCE (browser-side face recognition)
    ================================================================ */
-console.log('KCST Staff Pro build: face-v6 (table: staff_face_descriptors)');
+console.log('KCST Staff Pro build: face-v7 (table: staff_face_descriptors)');
 const FACE_LIB_URL   = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js';
 const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
 const FACE_MATCH_THRESHOLD = 0.45;  // max distance to accept a match (lower = stricter)
