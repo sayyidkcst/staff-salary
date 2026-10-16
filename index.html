@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f4f7fb">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -746,10 +747,146 @@
     }
     .history-summary .hbox p { font-size: 10px; color: #64748b; text-transform: uppercase; }
     .history-summary .hbox h3 { font-size: 18px; margin-top: 5px; }
+    /* ================= DARK MODE ================= */
+    body.dark-mode {background:#0b1220;color:#e2e8f0;color-scheme:dark}
+    body.dark-mode h1,
+    body.dark-mode h2,
+    body.dark-mode h3,
+    body.dark-mode h4 {color:#f1f5f9}
+    body.dark-mode .welcome h2 {color:white}
+    body.dark-mode .topbar {background:#111827;border-bottom-color:#243044}
+    body.dark-mode .mobile-menu {background:#1e293b;color:#e2e8f0}
+    body.dark-mode .page-title h1,
+    body.dark-mode .login-card h2,
+    body.dark-mode .profile-dropdown-header strong {color:#f1f5f9}
+    body.dark-mode .page-title p,
+    body.dark-mode .page-head p,
+    body.dark-mode .login-card .subtitle,
+    body.dark-mode .login-field label,
+    body.dark-mode .search span,
+    body.dark-mode .profile-info span,
+    body.dark-mode .caret,
+    body.dark-mode .profile-dropdown-header span,
+    body.dark-mode .stat-info p,
+    body.dark-mode .company-logo-box p,
+    body.dark-mode .info-field label,
+    body.dark-mode .attendance-box p,
+    body.dark-mode .setting-item p,
+    body.dark-mode .modal .modal-sub,
+    body.dark-mode .modal label,
+    body.dark-mode .salary-summary .box p,
+    body.dark-mode .history-summary .hbox p,
+    body.dark-mode .menu-title {color:#94a3b8}
+    body.dark-mode .login-card,
+    body.dark-mode .card,
+    body.dark-mode .attendance-box,
+    body.dark-mode .salary-summary .box,
+    body.dark-mode .modal,
+    body.dark-mode .profile-dropdown {background:#172033;border-color:#273449}
+    body.dark-mode .login-card {box-shadow:0 25px 60px rgba(0,0,0,.6)}
+    body.dark-mode .card,
+    body.dark-mode .attendance-box,
+    body.dark-mode .salary-summary .box {box-shadow:0 3px 12px rgba(0,0,0,.25)}
+    body.dark-mode .login-field input,
+    body.dark-mode .search input,
+    body.dark-mode .info-field input,
+    body.dark-mode .info-field textarea,
+    body.dark-mode .settings-input,
+    body.dark-mode .salary-day-input,
+    body.dark-mode .modal input,
+    body.dark-mode .modal select,
+    body.dark-mode .modal textarea,
+    body.dark-mode .salary-toolbar input[type="month"] {background:#0f172a;border-color:#334155;color:#e2e8f0}
+    body.dark-mode .login-field input:focus,
+    body.dark-mode .salary-day-input:focus,
+    body.dark-mode .modal input:focus,
+    body.dark-mode .modal select:focus {background:#111c30;border-color:#3b82f6}
+    body.dark-mode .notification,
+    body.dark-mode .profile:hover {background:#1e293b}
+    body.dark-mode .profile-dropdown-header {border-bottom-color:#273449}
+    body.dark-mode .dropdown-item {color:#cbd5e1}
+    body.dark-mode .dropdown-item:hover {background:#273449}
+    body.dark-mode .dropdown-item.danger {color:#f87171}
+    body.dark-mode .dropdown-item.danger:hover {background:rgba(220,38,38,.18)}
+    body.dark-mode .blue {background:rgba(37,99,235,.2);color:#60a5fa}
+    body.dark-mode .green {background:rgba(22,163,74,.2);color:#4ade80}
+    body.dark-mode .orange {background:rgba(234,88,12,.22);color:#fb923c}
+    body.dark-mode .purple {background:rgba(124,58,237,.25);color:#a78bfa}
+    body.dark-mode .card-header button {color:#60a5fa}
+    body.dark-mode th {background:#1e293b;color:#94a3b8}
+    body.dark-mode td {border-bottom-color:#273449}
+    body.dark-mode .small-avatar {background:#312e81;color:#c7d2fe}
+    body.dark-mode .present {background:rgba(34,197,94,.16);color:#4ade80}
+    body.dark-mode .absent {background:rgba(239,68,68,.16);color:#f87171}
+    body.dark-mode .leave {background:rgba(245,158,11,.16);color:#fbbf24}
+    body.dark-mode .weekoff {background:rgba(99,102,241,.2);color:#a5b4fc}
+    body.dark-mode .wh-badge {background:rgba(59,130,246,.15);color:#93c5fd;border-color:rgba(59,130,246,.35)}
+    body.dark-mode .wh-badge.overtime {background:rgba(34,197,94,.16);color:#86efac;border-color:rgba(34,197,94,.35)}
+    body.dark-mode .wh-badge.low {background:rgba(245,158,11,.16);color:#fbbf24;border-color:rgba(245,158,11,.35)}
+    body.dark-mode .wh-badge.empty,
+    body.dark-mode .exp-badge.new {background:#1e293b;color:#94a3b8;border-color:#334155}
+    body.dark-mode .exp-badge {background:rgba(168,85,247,.16);color:#d8b4fe;border-color:rgba(168,85,247,.35)}
+    body.dark-mode .quick-btn {background:#1e293b;border-color:#334155}
+    body.dark-mode .quick-btn:hover {background:#1e3a5f;border-color:#2563eb}
+    body.dark-mode .quick-btn span {color:#cbd5e1}
+    body.dark-mode .view-toggle {background:#1e293b}
+    body.dark-mode .view-tab {color:#94a3b8}
+    body.dark-mode .view-tab:hover {color:#e2e8f0}
+    body.dark-mode .view-tab.active {background:#334155;color:#93c5fd;box-shadow:none}
+    body.dark-mode .setting-item {border-bottom-color:#273449}
+    body.dark-mode .toggle {background:#475569}
+    body.dark-mode .toggle.active {background:#2563eb}
+    body.dark-mode .btn-secondary,
+    body.dark-mode .collect-btn.secondary,
+    body.dark-mode .action-btn {background:#273449;color:#e2e8f0}
+    body.dark-mode .btn-secondary:hover,
+    body.dark-mode .collect-btn.secondary:hover,
+    body.dark-mode .action-btn:hover {background:#334155}
+    body.dark-mode .action-btn.edit:hover {background:rgba(37,99,235,.35)}
+    body.dark-mode .action-btn.delete:hover {background:rgba(220,38,38,.35)}
+    body.dark-mode .action-btn.print:hover,
+    body.dark-mode .action-btn.face:hover {background:rgba(124,58,237,.35)}
+    body.dark-mode .action-btn.face.enrolled {background:rgba(34,197,94,.25)}
+    body.dark-mode .db-status.success {background:rgba(34,197,94,.16);color:#86efac}
+    body.dark-mode .db-status.error {background:rgba(239,68,68,.16);color:#fca5a5}
+    body.dark-mode .db-status.info {background:rgba(59,130,246,.16);color:#93c5fd}
+    body.dark-mode #loginError {background:rgba(239,68,68,.16);color:#fca5a5}
+    body.dark-mode .modal-backdrop {background:rgba(2,6,23,.75)}
+    body.dark-mode .salary-toolbar .status-pill {background:#273449;color:#cbd5e1}
+    body.dark-mode .salary-toolbar .status-pill.overdue {background:rgba(239,68,68,.16);color:#fca5a5}
+    body.dark-mode .salary-toolbar .status-pill.paid {background:rgba(34,197,94,.16);color:#86efac}
+    body.dark-mode .salary-toolbar .status-pill.partial,
+    body.dark-mode .carry-badge {background:rgba(245,158,11,.16);color:#fbbf24}
+    body.dark-mode .salary-amount {color:#e2e8f0}
+    body.dark-mode .salary-amount.paid {color:#4ade80}
+    body.dark-mode .salary-amount.overdue {color:#f87171}
+    body.dark-mode .salary-amount.partial {color:#fbbf24}
+    body.dark-mode .history-summary .hbox {background:#1e293b;border-color:#334155}
+    body.dark-mode .enroll-progress {background:#334155}
+    body.dark-mode .enroll-status {color:#93c5fd}
+    body.dark-mode .enroll-status.error {color:#f87171}
+    body.dark-mode .enroll-status.ok {color:#4ade80}
+    body.dark-mode [style*="background:white"],
+    body.dark-mode [style*="background:#f1f5f9"] {background:#1e293b !important}
+    body.dark-mode [style*="background:#eff6ff"] {background:rgba(59,130,246,.15) !important;border-color:rgba(59,130,246,.35) !important}
+    body.dark-mode [style*="background:#ede9fe"] {background:rgba(124,58,237,.2) !important;border-color:rgba(124,58,237,.4) !important}
+    body.dark-mode [style*="border:1px solid #e5e7eb"],
+    body.dark-mode [style*="border:1px solid #ddd"] {border-color:#334155 !important}
+    body.dark-mode [style*="color:#1e293b"] {color:#e2e8f0 !important}
+    body.dark-mode [style*="color:#64748b"] {color:#94a3b8 !important}
+    body.dark-mode [style*="color:#1d4ed8"] {color:#93c5fd !important}
+    body.dark-mode [style*="color:#15803d"],
+    body.dark-mode [style*="color:#16a34a"] {color:#4ade80 !important}
+    body.dark-mode [style*="color:#dc2626"],
+    body.dark-mode [style*="color:#b91c1c"] {color:#f87171 !important}
+    body.dark-mode [style*="color:#b45309"] {color:#fbbf24 !important}
+    body.dark-mode [style*="color:#6d28d9"] {color:#c4b5fd !important}
+    body.dark-mode { transition: background 0.2s, color 0.2s; }
 </style>
 </head>
 
 <body>
+<script>try{if(localStorage.getItem('staffpro_dark_mode')==='1')document.body.classList.add('dark-mode');}catch(e){}</script>
 
 <!-- ================= ADMIN LOGIN SCREEN ================= -->
 <div id="loginScreen">
@@ -1236,7 +1373,7 @@ Kerala, India</textarea>
 <div class="modal-backdrop" id="faceEnrollModal">
     <div class="modal">
         <h3 id="faceEnrollTitle">Enroll Face</h3>
-        <p class="modal-sub">Captures 5 quick samples of the face for attendance. Only numeric face data is stored, not photos. <span style="color:#94a3b8;">Build: face-v5 · table staff_face_descriptors</span></p>
+        <p class="modal-sub">Captures 5 quick samples of the face for attendance. Only numeric face data is stored, not photos. <span style="color:#94a3b8;">Build: face-v6 · table staff_face_descriptors</span></p>
         <div class="enroll-cam"><video id="enrollVideo" playsinline muted autoplay></video></div>
         <div class="enroll-status" id="enrollStatus">Preparing…</div>
         <div class="enroll-progress"><div id="enrollBar"></div></div>
@@ -4094,9 +4231,17 @@ function toggleSetting(element) {
     element.classList.toggle("active");
 }
 
-function toggleDarkMode(element) {
-    element.classList.toggle("active");
-    document.body.classList.toggle("dark-mode");
+function setDarkMode(on) {
+    document.body.classList.toggle('dark-mode', on);
+    const t = document.querySelector('.toggle[onclick^="toggleDarkMode"]');
+    if (t) t.classList.toggle('active', on);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', on ? '#0b1220' : '#f4f7fb');
+    try { localStorage.setItem('staffpro_dark_mode', on ? '1' : '0'); } catch (e) { /* storage unavailable */ }
+}
+
+function toggleDarkMode() {
+    setDarkMode(!document.body.classList.contains('dark-mode'));
 }
 
 async function saveSettings() {
@@ -5019,6 +5164,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    setDarkMode(localStorage.getItem('staffpro_dark_mode') === '1');
+
     const savedSalaryDay = getSavedSalaryDay();
     const salaryDayInput = document.getElementById('salaryDayInput');
     if (salaryDayInput && savedSalaryDay !== null) salaryDayInput.value = savedSalaryDay;
@@ -5058,7 +5205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 /* ================================================================
    FACE ATTENDANCE (browser-side face recognition)
    ================================================================ */
-console.log('KCST Staff Pro build: face-v5 (table: staff_face_descriptors)');
+console.log('KCST Staff Pro build: face-v6 (table: staff_face_descriptors)');
 const FACE_LIB_URL   = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js';
 const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
 const FACE_MATCH_THRESHOLD = 0.45;  // max distance to accept a match (lower = stricter)
