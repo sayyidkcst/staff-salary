@@ -1236,7 +1236,7 @@ Kerala, India</textarea>
 <div class="modal-backdrop" id="faceEnrollModal">
     <div class="modal">
         <h3 id="faceEnrollTitle">Enroll Face</h3>
-        <p class="modal-sub">Captures 5 quick samples of the face for attendance. Only numeric face data is stored, not photos. <span style="color:#94a3b8;">Build: face-v4 · table staff_face_descriptors</span></p>
+        <p class="modal-sub">Captures 5 quick samples of the face for attendance. Only numeric face data is stored, not photos. <span style="color:#94a3b8;">Build: face-v5 · table staff_face_descriptors</span></p>
         <div class="enroll-cam"><video id="enrollVideo" playsinline muted autoplay></video></div>
         <div class="enroll-status" id="enrollStatus">Preparing…</div>
         <div class="enroll-progress"><div id="enrollBar"></div></div>
@@ -5058,7 +5058,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 /* ================================================================
    FACE ATTENDANCE (browser-side face recognition)
    ================================================================ */
-console.log('KCST Staff Pro build: face-v4 (table: staff_face_descriptors)');
+console.log('KCST Staff Pro build: face-v5 (table: staff_face_descriptors)');
 const FACE_LIB_URL   = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js';
 const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
 const FACE_MATCH_THRESHOLD = 0.45;  // max distance to accept a match (lower = stricter)
@@ -5106,6 +5106,20 @@ function loadFaceLib() {
                     faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL),
                     faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL)
                 ]);
+
+                // use the GPU when available (much faster on phones)
+                try { await faceapi.tf.setBackend('webgl'); await faceapi.tf.ready(); } catch (e) { console.warn('WebGL backend unavailable:', e); }
+                console.log('Face backend:', faceapi.tf.getBackend());
+
+                // warm-up: the first run of each model compiles GPU shaders (can take seconds)
+                try {
+                    const c = document.createElement('canvas');
+                    c.width = c.height = 150;
+                    await faceapi.detectSingleFace(c, faceDetectorOptions(224));
+                    await faceapi.nets.faceLandmark68Net.detectLandmarks(c);
+                    await faceapi.nets.faceRecognitionNet.computeFaceDescriptor(c);
+                } catch (e) { console.warn('Face warm-up skipped:', e); }
+
                 resolve();
             } catch (e) { reject(e); }
         };
@@ -5133,8 +5147,8 @@ function stopFaceCamera(stream, videoEl) {
     if (videoEl) videoEl.srcObject = null;
 }
 
-function faceDetectorOptions() {
-    return new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
+function faceDetectorOptions(size) {
+    return new faceapi.TinyFaceDetectorOptions({ inputSize: size || 224, scoreThreshold: 0.5 });
 }
 
 function faceDist(a, b) {
@@ -5232,7 +5246,7 @@ async function startFaceCapture() {
             let got = null;
             const deadline = Date.now() + 9000;
             while (enroll.running && Date.now() < deadline && !got) {
-                const det = await faceapi.detectSingleFace(video, faceDetectorOptions())
+                const det = await faceapi.detectSingleFace(video, faceDetectorOptions(320))
                     .withFaceLandmarks().withFaceDescriptor();
                 if (!det) { setEnrollStatus('No face found — look at the camera', 'error'); await faceSleep(250); continue; }
                 if (det.detection.score < 0.6) { await faceSleep(200); continue; }
@@ -5295,10 +5309,10 @@ async function removeFaceData() {
 const kiosk = {
     running: false, busy: false, stream: null, timer: null, clockTimer: null, wake: null,
     pauseUntil: 0, enrolled: [], names: {}, lastSeen: {}, recent: [],
-    blink: { sawOpen: false, sawClosed: false, since: 0 }
+    blink: { sawOpen: false, sawClosed: false, since: 0, maxEar: 0 }
 };
 
-function kioskBlinkReset() { kiosk.blink = { sawOpen: false, sawClosed: false, since: 0 }; }
+function kioskBlinkReset() { kiosk.blink = { sawOpen: false, sawClosed: false, since: 0, maxEar: 0 }; }
 
 function setKioskState(state, text) {
     document.getElementById('kioskRing').className = 'kiosk-ring ' + state;
@@ -5387,43 +5401,45 @@ function closeFaceKiosk() {
 
 async function faceKioskTick() {
     if (!kiosk.running) return;
-    let delay = 150;
+    let delay = 20;
 
     try {
         if (kiosk.busy || performance.now() < kiosk.pauseUntil) {
             delay = 200;
         } else {
             const video = document.getElementById('kioskVideo');
-            const det = await faceapi.detectSingleFace(video, faceDetectorOptions()).withFaceLandmarks();
+            const det = await faceapi.detectSingleFace(video, faceDetectorOptions(224)).withFaceLandmarks();
 
             if (!det) {
                 kioskBlinkReset();
                 setKioskState('idle', 'Show your face to the camera');
                 kioskShowResult('');
-                delay = 250;
+                delay = 120;
             } else if (det.detection.box.width / video.videoWidth < 0.22) {
                 setKioskState('wait', 'Please come a little closer');
             } else {
                 const requireBlink = document.getElementById('kioskBlinkToggle').checked;
                 if (!requireBlink) {
-                    await kioskRecognize();
+                    await kioskRecognize(det);
                     delay = 400;
                 } else {
-                    const b = kiosk.blink;
+                    let b = kiosk.blink;
                     const now = performance.now();
                     if (!b.since) b.since = now;
-                    if (now - b.since > 10000) { kioskBlinkReset(); kiosk.blink.since = now; }
+                    if (now - b.since > 10000) { kioskBlinkReset(); b = kiosk.blink; b.since = now; }
 
+                    // adaptive thresholds relative to this person's open-eye value
                     const ear = faceEAR(det.landmarks);
+                    b.maxEar = Math.max(ear, b.maxEar * 0.995);
                     let blinked = false;
-                    if (ear > EAR_OPEN) {
+                    if (ear > b.maxEar * 0.88) {
                         if (b.sawOpen && b.sawClosed) blinked = true; else b.sawOpen = true;
-                    } else if (ear < EAR_CLOSED && b.sawOpen) {
+                    } else if (ear < b.maxEar * 0.75 && b.sawOpen) {
                         b.sawClosed = true;
                     }
 
                     if (blinked) {
-                        await kioskRecognize();
+                        await kioskRecognize(det);
                         delay = 400;
                     } else {
                         setKioskState('wait', 'Look at the camera and blink 👁️');
@@ -5451,16 +5467,29 @@ function matchFace(descriptor) {
     return ranked[0].st;
 }
 
-async function kioskRecognize() {
+async function kioskRecognize(det) {
     kiosk.busy = true;
     setKioskState('wait', 'Checking…');
     try {
         const video = document.getElementById('kioskVideo');
-        const full = await faceapi.detectSingleFace(video, faceDetectorOptions())
-            .withFaceLandmarks().withFaceDescriptor();
-        if (!full) return;
+        const t0 = performance.now();
+        let descriptor = null;
 
-        const staff = matchFace(full.descriptor);
+        if (det && det.alignedRect) {
+            try {
+                const faces = await faceapi.extractFaces(video, [det.alignedRect]);
+                descriptor = await faceapi.nets.faceRecognitionNet.computeFaceDescriptor(faces[0]);
+            } catch (e) { console.warn('Fast descriptor failed, falling back:', e); }
+        }
+        if (!descriptor) {
+            const full = await faceapi.detectSingleFace(video, faceDetectorOptions(320))
+                .withFaceLandmarks().withFaceDescriptor();
+            if (!full) return;
+            descriptor = full.descriptor;
+        }
+        console.log('Recognition took', Math.round(performance.now() - t0), 'ms');
+
+        const staff = matchFace(descriptor);
         if (!staff) {
             faceBeep(false);
             setKioskState('fail', 'Face not recognized');
