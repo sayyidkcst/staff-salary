@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>KCST Staff Pro · Salary Collection</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1233,7 +1236,7 @@ Kerala, India</textarea>
 <div class="modal-backdrop" id="faceEnrollModal">
     <div class="modal">
         <h3 id="faceEnrollTitle">Enroll Face</h3>
-        <p class="modal-sub">Captures 5 quick samples of the face for attendance. Only numeric face data is stored, not photos.</p>
+        <p class="modal-sub">Captures 5 quick samples of the face for attendance. Only numeric face data is stored, not photos. <span style="color:#94a3b8;">Build: face-v4 · table staff_face_descriptors</span></p>
         <div class="enroll-cam"><video id="enrollVideo" playsinline muted autoplay></video></div>
         <div class="enroll-status" id="enrollStatus">Preparing…</div>
         <div class="enroll-progress"><div id="enrollBar"></div></div>
@@ -5055,6 +5058,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 /* ================================================================
    FACE ATTENDANCE (browser-side face recognition)
    ================================================================ */
+console.log('KCST Staff Pro build: face-v4 (table: staff_face_descriptors)');
 const FACE_LIB_URL   = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/dist/face-api.js';
 const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model/';
 const FACE_MATCH_THRESHOLD = 0.45;  // max distance to accept a match (lower = stricter)
