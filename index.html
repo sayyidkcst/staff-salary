@@ -1543,8 +1543,9 @@ Kerala, India</textarea>
             </table>
         </div>
 
-        <div class="modal-actions" style="justify-content:space-between;">
-            <button class="btn-secondary" onclick="printSalarySlip()">🖨️ Print Salary Slip</button>
+        <div class="modal-actions" style="justify-content:space-between;gap:8px;">
+            <button class="primary-btn" onclick="printTimeSheet()">🖨️ Print Time Sheet</button>
+            <button class="btn-secondary" onclick="printSalarySlip()">🧾 Salary Slip</button>
             <button class="btn-secondary" onclick="closeStaffDetailModal()">Close</button>
         </div>
     </div>
@@ -3676,6 +3677,326 @@ async function printSalarySlip() {
         This is a computer-generated salary slip issued by <strong>${escapeHtml(company.name || 'StaffPro')}</strong>.
         Generated on ${new Date().toLocaleString()}.
     </div>
+</body>
+</html>
+    `);
+
+    printWindow.document.close();
+}
+
+/* ================================================================
+   PRINT TIME SHEET — monthly attendance + salary balance
+   ================================================================ */
+async function printTimeSheet() {
+    if (!currentStaffDetail || !currentStaffDetailCode) {
+        showGlobalStatus('No staff selected.', 'error');
+        return;
+    }
+
+    const monthValue = currentStaffDetail.month
+        || document.getElementById('staffDetailMonth').value;
+    if (!monthValue) {
+        showGlobalStatus('Please select a month first.', 'error');
+        return;
+    }
+
+    const [year, month] = monthValue.split('-').map(Number);
+    const monthName = new Date(year, month - 1, 1)
+        .toLocaleDateString('en-US', { month: 'long' });
+
+    let companyName = 'KCST INDIA LIMITED';
+    try {
+        const { data } = await _supabase
+            .from('company')
+            .select('*')
+            .limit(1)
+            .maybeSingle();
+        if (data && data.name) companyName = data.name;
+    } catch (err) { console.warn('Company lookup failed:', err); }
+
+    const firstDay = `${monthValue}-01`;
+    const lastDayDate = new Date(year, month, 0);
+    const lastDay = `${monthValue}-${String(lastDayDate.getDate()).padStart(2, '0')}`;
+
+    let attRecords = [];
+    try {
+        const { data, error } = await _supabase
+            .from('attendance')
+            .select('date, status, check_in, check_out')
+            .eq('staff_id', currentStaffDetailCode)
+            .gte('date', firstDay)
+            .lte('date', lastDay)
+            .order('date', { ascending: true });
+
+        if (error) throw error;
+        attRecords = data || [];
+    } catch (err) {
+        console.error('Time sheet fetch error:', err);
+        showGlobalStatus('Error fetching attendance for time sheet: ' + err.message, 'error');
+        return;
+    }
+
+    if (!attRecords.length) {
+        showGlobalStatus('No records to print for this month.', 'error');
+        return;
+    }
+
+    const dailyRate = Number(currentStaffDetail.daily_rate || 0);
+    const rateHistory = await loadRateHistory();
+
+    let currentCollected = 0;
+    try {
+        const { data: collData } = await _supabase
+            .from('salary_collections')
+            .select('amount')
+            .eq('staff_id', currentStaffDetailCode)
+            .eq('salary_month', monthValue);
+        (collData || []).forEach(c => {
+            currentCollected += Number(c.amount || 0);
+        });
+    } catch (err) { console.warn('Collections lookup failed:', err); }
+
+    const prevMonthDate = new Date(year, month - 2, 1);
+    const prevMonthValue = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+    const prevFirstDay = `${prevMonthValue}-01`;
+    const prevLastDayDate = new Date(prevMonthDate.getFullYear(), prevMonthDate.getMonth() + 1, 0);
+    const prevLastDay = `${prevMonthValue}-${String(prevLastDayDate.getDate()).padStart(2, '0')}`;
+
+    let prevAttRows = [], prevCollected = 0;
+    try {
+        const { data: prevAtt } = await _supabase
+            .from('attendance')
+            .select('date, status')
+            .eq('staff_id', currentStaffDetailCode)
+            .gte('date', prevFirstDay)
+            .lte('date', prevLastDay);
+        prevAttRows = prevAtt || [];
+
+        const { data: prevColl } = await _supabase
+            .from('salary_collections')
+            .select('amount')
+            .eq('staff_id', currentStaffDetailCode)
+            .eq('salary_month', prevMonthValue);
+        (prevColl || []).forEach(c => {
+            prevCollected += Number(c.amount || 0);
+        });
+    } catch (err) {
+        console.warn('Prev month lookup failed:', err);
+    }
+
+    const adjRows = await fetchAdjustments([monthValue, prevMonthValue], currentStaffDetailCode);
+    const curAdj = sumAdjustments(adjRows, currentStaffDetailCode, monthValue);
+    const prevAdj = sumAdjustments(adjRows, currentStaffDetailCode, prevMonthValue);
+
+    const monthlySalary = netPayable(
+        sumPayable(rateHistory, currentStaffDetailCode, attRecords, dailyRate),
+        curAdj.income, curAdj.deduction
+    );
+    const prevPayable = netPayable(
+        sumPayable(rateHistory, currentStaffDetailCode, prevAttRows, dailyRate),
+        prevAdj.income, prevAdj.deduction
+    );
+
+    const pendingSalary = Math.max(0, prevPayable - prevCollected);
+    const totalSalary = pendingSalary + monthlySalary;
+    const salaryBalance = Math.max(0, totalSalary - currentCollected);
+
+    let present = 0, halfDay = 0, weekOff = 0;
+    attRecords.forEach(a => {
+        const s = normalizeStatus(a.status);
+        if (s === 'present') present++;
+        else if (s === 'half_day') halfDay++;
+        else if (s === 'week_off') weekOff++;
+    });
+    const totalDays = attRecords.length;
+
+    const money2 = n => Number(n || 0).toLocaleString('en-IN', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+    const money0 = n => Number.isInteger(Number(n))
+        ? Number(n).toLocaleString('en-IN')
+        : money2(n);
+
+    const statusLabel = raw => {
+        const s = normalizeStatus(raw);
+        if (s === 'present') return 'Full Day';
+        if (s === 'half_day') return 'Half Day';
+        if (s === 'week_off') return 'Week Off';
+        if (s === 'absent') return 'Absent';
+        if (s === 'leave') return 'Leave';
+        return raw
+            ? String(raw).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+            : '—';
+    };
+
+    const dayAmount = a => {
+        const s = normalizeStatus(a.status);
+        const rate = rateOnDate(rateHistory, currentStaffDetailCode, a.date, dailyRate);
+        if (s === 'present' || s === 'week_off') return rate;
+        if (s === 'half_day') return rate / 2;
+        return 0;
+    };
+
+    const rows = attRecords.map(a => {
+        const [y, m, d] = String(a.date).slice(0, 10).split('-');
+        const dayName = new Date(Number(y), Number(m) - 1, Number(d))
+            .toLocaleDateString('en-US', { weekday: 'long' });
+        return `<tr>
+            <td>${d}-${m}-${y}</td>
+            <td>${dayName}</td>
+            <td>${escapeHtml(statusLabel(a.status))}</td>
+            <td>${money0(dayAmount(a))}</td>
+        </tr>`;
+    }).join('');
+
+    const printWindow = window.open('', '_blank', 'width=900,height=1000');
+    if (!printWindow) {
+        showGlobalStatus('Please allow pop-ups to print.', 'error');
+        return;
+    }
+
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Time Sheet — ${escapeHtml(currentStaffDetail.name || 'Staff')} — ${monthName} ${year}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        @page { size: A4 portrait; margin: 14mm; }
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            color: #000;
+            background: #fff;
+            padding: 18px;
+            max-width: 780px;
+            margin: 0 auto;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .print-actions { text-align: center; margin-bottom: 22px; }
+        .print-actions button {
+            background: #0b1f6b; color: #fff; border: none;
+            padding: 9px 22px; border-radius: 6px; margin: 0 4px;
+            font: 600 13px 'Segoe UI', Arial, sans-serif; cursor: pointer;
+        }
+        .print-actions button:hover { background: #071650; }
+        .print-actions button.secondary {
+            background: #fff; color: #334155; border: 1px solid #cbd5e1;
+        }
+        .print-actions button.secondary:hover { background: #f8fafc; }
+
+        .ts-company {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            color: #0b1f6b;
+            text-align: center;
+        }
+        .ts-rule { border-top: 2px solid #0b1f6b; margin: 10px 0 20px; }
+        .ts-title {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-align: center;
+        }
+        .ts-month { font-size: 15px; text-align: center; margin: 9px 0 24px; }
+
+        .ts-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 20px;
+            font-size: 11px;
+            line-height: 1.85;
+        }
+        .ts-meta-left { flex: 0 0 24%; }
+        .ts-meta-right { flex: 0 0 32%; text-align: right; }
+        .ts-balance { flex: 1 1 auto; text-align: center; }
+        .ts-balance .label { font-size: 18px; font-weight: 700; letter-spacing: 0.2px; }
+        .ts-balance .amount { font-size: 18px; font-weight: 700; margin-top: 3px; }
+
+        table.ts-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 11.5px;
+        }
+        table.ts-table th {
+            background: #000;
+            color: #fff;
+            font-size: 11.5px;
+            font-weight: 700;
+            text-align: left;
+            padding: 6px 10px;
+        }
+        table.ts-table td {
+            padding: 3px 10px;
+            border-bottom: 1px solid #000;
+            line-height: 1.4;
+        }
+        table.ts-table col.c-date { width: 21%; }
+        table.ts-table col.c-day { width: 39%; }
+        table.ts-table col.c-status { width: 23%; }
+        table.ts-table col.c-amount { width: 17%; }
+
+        @media print {
+            body { padding: 0; max-width: none; }
+            .no-print { display: none !important; }
+            tr { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-actions no-print">
+        <button onclick="window.print()">🖨️ Print Time Sheet</button>
+        <button class="secondary" onclick="window.close()">Close</button>
+    </div>
+
+    <div class="ts-company">${escapeHtml(String(companyName).toUpperCase())}</div>
+    <div class="ts-rule"></div>
+    <div class="ts-title">TIME SHEET OF ${escapeHtml(String(currentStaffDetail.name || 'Staff').toUpperCase())}</div>
+    <div class="ts-month">${monthName} - ${year}</div>
+
+    <div class="ts-meta">
+        <div class="ts-meta-left">
+            <div>Full Duty : ${present}</div>
+            <div>Half Duty : ${halfDay}</div>
+            <div>Week off : ${weekOff}</div>
+            <div>Total Days : ${totalDays}</div>
+        </div>
+        <div class="ts-balance">
+            <div class="label">SALARY BALANCE</div>
+            <div class="amount">INR : ${money2(salaryBalance)}</div>
+        </div>
+        <div class="ts-meta-right">
+            <div>Monthly Salary : ${money2(monthlySalary)}</div>
+            <div>Pending Salary : ${pendingSalary > 0 ? money2(pendingSalary) : ''}</div>
+            <div>Total Salary : ${money2(totalSalary)}</div>
+            <div>Salary Collected : ${money2(currentCollected)}</div>
+        </div>
+    </div>
+
+    <table class="ts-table">
+        <colgroup>
+            <col class="c-date">
+            <col class="c-day">
+            <col class="c-status">
+            <col class="c-amount">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Status</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+    </table>
 </body>
 </html>
     `);
