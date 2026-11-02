@@ -1259,6 +1259,8 @@ Kerala, India</textarea>
                 <div class="box"><p>Total Collected</p><h2 id="salaryTotalCollected" style="color:#16a34a;">–</h2></div>
                 <div class="box"><p>Outstanding</p><h2 id="salaryTotalOutstanding" style="color:#dc2626;">–</h2></div>
                 <div class="box"><p>Carried Forward</p><h2 id="salaryCarriedForward" style="color:#b45309;">–</h2></div>
+                <div class="box"><p>Other Income</p><h2 id="salaryTotalIncome" style="color:#16a34a;">–</h2></div>
+                <div class="box"><p>Deductions</p><h2 id="salaryTotalDeduction" style="color:#dc2626;">–</h2></div>
             </div>
 
             <div class="card">
@@ -1587,6 +1589,7 @@ Kerala, India</textarea>
             <div>
                 <label>Date *</label>
                 <input id="collectDate" type="date">
+                <small id="collectDateHint" style="display:block;font-size:11px;color:#64748b;margin-top:4px;"></small>
             </div>
             <div>
                 <label>Time *</label>
@@ -1625,7 +1628,9 @@ Kerala, India</textarea>
 
         <div class="history-summary" id="historySummary">
             <div class="hbox"><p>Old Balance (Carried)</p><h3 id="historyPrevDue" style="color:#b45309;">–</h3></div>
-            <div class="hbox"><p>Current Payable</p><h3 id="historyTotalPayable" style="color:#1e293b;">–</h3></div>
+            <div class="hbox"><p>Other Income</p><h3 id="historyIncome" style="color:#16a34a;">–</h3></div>
+            <div class="hbox"><p>Deductions</p><h3 id="historyDeduction" style="color:#dc2626;">–</h3></div>
+            <div class="hbox"><p>Net Payable</p><h3 id="historyTotalPayable" style="color:#1e293b;">–</h3></div>
             <div class="hbox"><p>Total Collected</p><h3 id="historyTotalCollected" style="color:#16a34a;">–</h3></div>
             <div class="hbox"><p>Balance</p><h3 id="historyBalance" style="color:#dc2626;">–</h3></div>
         </div>
@@ -1648,9 +1653,78 @@ Kerala, India</textarea>
             </table>
         </div>
 
+        <h4 style="margin:18px 0 8px;font-size:14px;">Other Income &amp; Deductions</h4>
+        <div class="table-wrapper" style="max-height:220px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:10px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Title</th>
+                        <th>Amount</th>
+                        <th>Notes</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="historyAdjBody">
+                    <tr><td colspan="5" style="text-align:center;color:#94a3b8;">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+
         <div class="modal-actions" style="justify-content:space-between;">
             <button class="btn-print" onclick="printSalaryStatement()">🖨️ Print Statement</button>
             <button class="btn-secondary" onclick="closeSalaryHistoryModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= OTHER INCOME / DEDUCTION MODAL ================= -->
+<div class="modal-backdrop" id="adjustModal">
+    <div class="modal" style="max-width:480px;">
+        <h3 id="adjModalTitle">Add Other Income</h3>
+        <p class="modal-sub" id="adjModalSub">—</p>
+
+        <input type="hidden" id="adjEditId">
+        <input type="hidden" id="adjStaffCode">
+        <input type="hidden" id="adjMonth">
+
+        <div class="form-row">
+            <div>
+                <label>Type *</label>
+                <select id="adjKind" onchange="updateAdjustLabels()">
+                    <option value="income">➕ Other Income</option>
+                    <option value="deduction">➖ Deduction</option>
+                </select>
+            </div>
+            <div>
+                <label>Amount (₹) *</label>
+                <input id="adjAmount" type="number" step="0.01" min="0" placeholder="Enter amount">
+            </div>
+        </div>
+
+        <div class="form-row full">
+            <div>
+                <label>Title *</label>
+                <input id="adjTitle" list="adjTitleList" placeholder="e.g. Bonus, Incentive, Advance, Fine">
+                <datalist id="adjTitleList">
+                    <option value="Bonus"><option value="Incentive"><option value="Overtime"><option value="Allowance">
+                    <option value="Advance"><option value="Fine"><option value="Loan Repayment"><option value="Other">
+                </datalist>
+            </div>
+        </div>
+
+        <div class="form-row full">
+            <div>
+                <label>Notes (optional)</label>
+                <input id="adjNotes" placeholder="Any additional reference">
+            </div>
+        </div>
+
+        <div id="adjMessage" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
+
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeAdjustModal()">Cancel</button>
+            <button class="primary-btn" id="adjSaveBtn" onclick="saveAdjustment()">✅ Save</button>
         </div>
     </div>
 </div>
@@ -1777,6 +1851,59 @@ function normalizeStatus(raw) {
     if (s === 'leave') return 'leave';
     if (s === 'week_off' || s === 'weekoff') return 'week_off';
     return s;
+}
+
+/* ================================================================
+   OTHER INCOME / DEDUCTIONS + SETTLEMENT DATE HELPERS
+   ================================================================ */
+let adjustmentsTableWarned = false;
+
+async function fetchAdjustments(months, staffId) {
+    try {
+        let q = _supabase.from('salary_adjustments').select('*').in('salary_month', months);
+        if (staffId) q = q.eq('staff_id', staffId);
+        const { data, error } = await q.order('created_at', { ascending: true });
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        const missing = err && (err.code === '42P01' || err.code === 'PGRST205' || /does not exist|schema cache/i.test(err.message || ''));
+        if (missing && !adjustmentsTableWarned) {
+            adjustmentsTableWarned = true;
+            showGlobalStatus('Note: salary_adjustments table missing. Run salary_adjustments.sql in Supabase to enable Other Income / Deductions.', 'info');
+        }
+        console.warn('Adjustments lookup failed:', err);
+        return [];
+    }
+}
+
+function sumAdjustments(rows, staffId, month) {
+    let income = 0, deduction = 0;
+    (rows || []).forEach(a => {
+        if (a.staff_id !== staffId || a.salary_month !== month) return;
+        const amt = Number(a.amount || 0);
+        if (a.kind === 'income') income += amt;
+        else if (a.kind === 'deduction') deduction += amt;
+    });
+    return { income, deduction };
+}
+
+function netPayable(earned, income, deduction) {
+    return Math.max(0, Number(earned || 0) + Number(income || 0) - Number(deduction || 0));
+}
+
+// Salary for month X is settled on the salary day of month X+1 (default day 1).
+// e.g. October salary -> 01-November. Entry date is never used.
+function getSettlementDate(monthValue) {
+    const [y, m] = monthValue.split('-').map(Number);
+    const day = getSavedSalaryDay() || 1;
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    const d = new Date(y, m, Math.min(day, lastDay));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function monthLabel(monthValue) {
+    const [y, m] = monthValue.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
 function formatCurrency(amount) {
@@ -3342,7 +3469,7 @@ async function printSalarySlip() {
     const dailyRate = currentStaffDetail.daily_rate || 0;
     const rateHistory = await loadRateHistory();
     const paidDays = present + weekOff;
-    const currentPayable = sumPayable(rateHistory, currentStaffDetailCode, attRecords, dailyRate);
+    const earnedPay = sumPayable(rateHistory, currentStaffDetailCode, attRecords, dailyRate);
     const slipRates = new Set(attRecords.filter(a => isPaidStatus(a.status))
         .map(a => rateOnDate(rateHistory, currentStaffDetailCode, a.date, dailyRate)));
     const slipRateLabel = slipRates.size > 1
@@ -3397,7 +3524,17 @@ async function printSalarySlip() {
         console.warn('Prev month lookup failed:', err);
     }
 
-    const prevPayable = sumPayable(rateHistory, currentStaffDetailCode, prevAttRows, dailyRate);
+    const slipAdj = await fetchAdjustments([monthValue, prevMonthValue], currentStaffDetailCode);
+    const slipCur = sumAdjustments(slipAdj, currentStaffDetailCode, monthValue);
+    const slipPrev = sumAdjustments(slipAdj, currentStaffDetailCode, prevMonthValue);
+    const currentPayable = netPayable(earnedPay, slipCur.income, slipCur.deduction);
+    const prevPayable = netPayable(sumPayable(rateHistory, currentStaffDetailCode, prevAttRows, dailyRate), slipPrev.income, slipPrev.deduction);
+    const slipCurAdjRows = slipAdj.filter(a => a.salary_month === monthValue);
+    const slipPayableRowsHtml = slipCurAdjRows.length
+        ? `<tr><td>Attendance Earnings (${slipRateLabel})</td><td class="right mono">₹${earnedPay.toLocaleString('en-IN')}</td></tr>`
+          + slipCurAdjRows.map(a => `<tr><td>${a.kind === 'income' ? '+ Other Income' : '− Deduction'}: ${escapeHtml(a.title || '')}</td><td class="right mono" style="color:${a.kind === 'income' ? '#15803d' : '#b91c1c'};">${a.kind === 'income' ? '+' : '−'}₹${Number(a.amount || 0).toLocaleString('en-IN')}</td></tr>`).join('')
+          + `<tr><td><strong>Net Payable (Current)</strong></td><td class="right mono"><strong>₹${currentPayable.toLocaleString('en-IN')}</strong></td></tr>`
+        : `<tr><td>Current Payable (${slipRateLabel})</td><td class="right mono">₹${currentPayable.toLocaleString('en-IN')}</td></tr>`;
     const oldBalance = Math.max(0, prevPayable - prevCollected);
     const totalDue = oldBalance + currentPayable;
     const finalOutstanding = Math.max(0, totalDue - currentCollected);
@@ -3497,7 +3634,7 @@ async function printSalarySlip() {
             </tr>
         </thead>
         <tbody>
-            <tr><td>Current Payable (${slipRateLabel})</td><td class="right mono">₹${currentPayable.toLocaleString('en-IN')}</td></tr>
+            ${slipPayableRowsHtml}
             <tr><td>Previous Balance (Carried Forward)</td><td class="right mono">₹${oldBalance.toLocaleString('en-IN')}</td></tr>
             <tr><td><strong>Total Due</strong></td><td class="right mono"><strong>₹${totalDue.toLocaleString('en-IN')}</strong></td></tr>
             <tr><td>Amount Collected</td><td class="right mono" style="color:#15803d;">₹${currentCollected.toLocaleString('en-IN')}</td></tr>
@@ -3608,6 +3745,7 @@ async function printHRReport() {
         }
         const collections = collData || [];
 
+        const hrAdj = await fetchAdjustments([monthValue]);
         const rateHistory = await loadRateHistory(true);
         const summary = {};
         (staffData || []).forEach(s => {
@@ -3647,7 +3785,8 @@ async function printHRReport() {
         });
 
         Object.values(summary).forEach(s => {
-            s.payable = s.earned;
+            const adjT = sumAdjustments(hrAdj, s.staff_id, monthValue);
+            s.payable = netPayable(s.earned, adjT.income, adjT.deduction);
             s.balance = Math.max(0, s.payable - s.collected);
         });
 
@@ -4635,6 +4774,8 @@ async function loadSalaryData() {
             .select('*')
             .eq('salary_month', prevMonthValue);
 
+        const adjRows = await fetchAdjustments([monthValue, prevMonthValue]);
+
         const prevSummary = {};
         (prevAttData || []).forEach(a => {
             const key = a.staff_id;
@@ -4654,7 +4795,8 @@ async function loadSalaryData() {
         const previousDues = {};
         allStaffList.forEach(s => {
             const prev = prevSummary[s.staff_id] || { present: 0, week_off: 0, earned: 0 };
-            const prevPayable = prev.earned;
+            const prevAdj = sumAdjustments(adjRows, s.staff_id, prevMonthValue);
+            const prevPayable = netPayable(prev.earned, prevAdj.income, prevAdj.deduction);
             const prevPaid = prevCollected[s.staff_id] || 0;
             const due = Math.max(0, prevPayable - prevPaid);
             if (due > 0) previousDues[s.staff_id] = due;
@@ -4684,7 +4826,8 @@ async function loadSalaryData() {
         });
 
         salaryData = Object.values(summary).map(item => {
-            const payable = item.earned;
+            const adj = sumAdjustments(adjRows, item.staff_id, monthValue);
+            const payable = netPayable(item.earned, adj.income, adj.deduction);
             const prevDue = previousDues[item.staff_id] || 0;
             const collected = collections
                 .filter(c => c.staff_id === item.staff_id)
@@ -4696,6 +4839,8 @@ async function loadSalaryData() {
                 ...item,
                 payable,
                 previousDue: prevDue,
+                income: adj.income,
+                deduction: adj.deduction,
                 collected,
                 balance,
             };
@@ -4710,6 +4855,8 @@ async function loadSalaryData() {
         document.getElementById('salaryTotalCollected').textContent = formatCurrency(totalCollected);
         document.getElementById('salaryTotalOutstanding').textContent = formatCurrency(totalOutstanding);
         document.getElementById('salaryCarriedForward').textContent = formatCurrency(totalCarried);
+        document.getElementById('salaryTotalIncome').textContent = formatCurrency(salaryData.reduce((sum, s) => sum + s.income, 0));
+        document.getElementById('salaryTotalDeduction').textContent = formatCurrency(salaryData.reduce((sum, s) => sum + s.deduction, 0));
 
         if (totalOutstanding > 0) {
             pill.className = 'status-pill overdue';
@@ -4753,7 +4900,7 @@ function renderSalaryTable() {
         return `<tr>
             <td><strong>${escapeHtml(s.staff_id)}</strong></td>
             <td>${escapeHtml(s.name)}</td>
-            <td class="salary-amount">${formatCurrency(s.payable)}</td>
+            <td class="salary-amount">${formatCurrency(s.payable)}${(s.income > 0 || s.deduction > 0) ? `<div style="font-size:11px;font-weight:500;color:#64748b;margin-top:2px;">Earned ${formatCurrency(s.earned)}${s.income > 0 ? ` <span style="color:#16a34a;">+${formatCurrency(s.income)}</span>` : ''}${s.deduction > 0 ? ` <span style="color:#dc2626;">−${formatCurrency(s.deduction)}</span>` : ''}</div>` : ''}</td>
             <td class="salary-amount" style="color:#b45309;">${s.previousDue > 0 ? formatCurrency(s.previousDue) : '—'}</td>
             <td class="salary-amount paid">${formatCurrency(s.collected)}</td>
             <td class="salary-amount ${balanceClass}">
@@ -4764,6 +4911,10 @@ function renderSalaryTable() {
                 <button class="collect-btn" onclick='openCollectSalaryModal("${s.staff_id}")' ${balance <= 0 ? 'disabled' : ''}>
                     💰 Collect
                 </button>
+                <button class="collect-btn secondary" title="Add other income (bonus, incentive, etc.)"
+                        onclick='openAdjustModal("${s.staff_id}", "income")' style="margin-left:6px;">➕ Income</button>
+                <button class="collect-btn secondary" title="Add deduction (advance, fine, etc.)"
+                        onclick='openAdjustModal("${s.staff_id}", "deduction")' style="margin-left:4px;">➖ Deduct</button>
                 <button class="action-btn edit" title="Payment History (Edit/Delete/Print)"
                         onclick='openSalaryHistoryModal("${s.staff_id}")'
                         style="margin-left:6px;">📋</button>
@@ -4796,10 +4947,10 @@ function openCollectSalaryModal(staffId) {
     document.getElementById('collectAmount').value = outstanding.toFixed(2);
 
     const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    document.getElementById('collectDate').value = `${yyyy}-${mm}-${dd}`;
+    // Settlement date = salary day of the NEXT month (not today's entry date)
+    document.getElementById('collectDate').value = getSettlementDate(currentSalaryMonth);
+    document.getElementById('collectDateHint').textContent =
+        `Settlement date for ${monthLabel(currentSalaryMonth)} salary. You can change it if needed.`;
 
     const hh = String(now.getHours()).padStart(2, '0');
     const min = String(now.getMinutes()).padStart(2, '0');
@@ -4925,6 +5076,142 @@ async function saveSalaryCollection() {
 }
 
 /* ================================================================
+   OTHER INCOME / DEDUCTIONS
+   ================================================================ */
+function updateAdjustLabels() {
+    const kind = document.getElementById('adjKind').value;
+    const editing = !!document.getElementById('adjEditId').value;
+    document.getElementById('adjModalTitle').textContent =
+        (editing ? 'Edit ' : 'Add ') + (kind === 'income' ? 'Other Income' : 'Deduction');
+}
+
+function openAdjustModal(staffId, kind) {
+    const staff = salaryData.find(s => s.staff_id === staffId);
+    if (!staff) { showGlobalStatus('Staff not found.', 'error'); return; }
+
+    document.getElementById('adjEditId').value = '';
+    document.getElementById('adjStaffCode').value = staffId;
+    document.getElementById('adjMonth').value = currentSalaryMonth;
+    document.getElementById('adjKind').value = kind || 'income';
+    document.getElementById('adjAmount').value = '';
+    document.getElementById('adjTitle').value = '';
+    document.getElementById('adjNotes').value = '';
+    document.getElementById('adjSaveBtn').textContent = '✅ Save';
+    document.getElementById('adjMessage').style.display = 'none';
+    document.getElementById('adjModalSub').textContent =
+        `${staff.name} (${staffId}) — ${monthLabel(currentSalaryMonth)}`;
+    updateAdjustLabels();
+    document.getElementById('adjustModal').classList.add('show');
+    setTimeout(() => document.getElementById('adjTitle').focus(), 100);
+}
+
+function openEditAdjustment(a) {
+    const staff = salaryData.find(s => s.staff_id === a.staff_id);
+    document.getElementById('adjEditId').value = a.id;
+    document.getElementById('adjStaffCode').value = a.staff_id;
+    document.getElementById('adjMonth').value = a.salary_month;
+    document.getElementById('adjKind').value = a.kind;
+    document.getElementById('adjAmount').value = a.amount;
+    document.getElementById('adjTitle').value = a.title || '';
+    document.getElementById('adjNotes').value = a.notes || '';
+    document.getElementById('adjSaveBtn').textContent = '💾 Update';
+    document.getElementById('adjMessage').style.display = 'none';
+    document.getElementById('adjModalSub').textContent =
+        `${staff ? staff.name : a.staff_id} (${a.staff_id}) — ${monthLabel(a.salary_month)}`;
+    updateAdjustLabels();
+    document.getElementById('adjustModal').classList.add('show');
+}
+
+function closeAdjustModal() {
+    document.getElementById('adjustModal').classList.remove('show');
+}
+
+async function saveAdjustment() {
+    const editId = document.getElementById('adjEditId').value;
+    const staffCode = document.getElementById('adjStaffCode').value;
+    const salaryMonth = document.getElementById('adjMonth').value;
+    const kind = document.getElementById('adjKind').value;
+    const amount = parseFloat(document.getElementById('adjAmount').value);
+    const title = document.getElementById('adjTitle').value.trim();
+    const notes = document.getElementById('adjNotes').value.trim();
+    const msgEl = document.getElementById('adjMessage');
+
+    const fail = (t) => {
+        msgEl.textContent = '❌ ' + t;
+        msgEl.style.background = '#fee2e2'; msgEl.style.color = '#991b1b';
+        msgEl.style.display = 'block';
+    };
+
+    if (!staffCode || !salaryMonth) return fail('Missing staff or month information.');
+    if (!amount || amount <= 0) return fail('Please enter a valid amount greater than 0.');
+    if (!title) return fail('Please enter a title (e.g. Bonus, Advance).');
+
+    const btn = document.getElementById('adjSaveBtn');
+    btn.disabled = true;
+    try {
+        const payload = { staff_id: staffCode, salary_month: salaryMonth, kind, title, amount, notes: notes || null };
+        let res;
+        if (editId) {
+            res = await _supabase.from('salary_adjustments').update(payload).eq('id', editId);
+        } else {
+            payload.created_at = new Date().toISOString();
+            res = await _supabase.from('salary_adjustments').insert([payload]);
+        }
+        if (res.error) throw res.error;
+
+        showGlobalStatus(`${kind === 'income' ? 'Other income' : 'Deduction'} ${editId ? 'updated' : 'added'}: ${formatCurrency(amount)}`, 'success');
+        closeAdjustModal();
+        await loadSalaryData();
+        if (document.getElementById('salaryHistoryModal').classList.contains('show')) {
+            const code = document.getElementById('historyStaffName').dataset.staffCode;
+            if (code) openSalaryHistoryModal(code);
+        }
+    } catch (err) {
+        console.error('Adjustment save error:', err);
+        fail('Error saving: ' + err.message + (/does not exist|schema cache/i.test(err.message || '') ? ' — run salary_adjustments.sql in Supabase first.' : ''));
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function deleteAdjustment(id) {
+    if (!confirm('Delete this entry?')) return;
+    try {
+        const { error } = await _supabase.from('salary_adjustments').delete().eq('id', id);
+        if (error) throw error;
+        showGlobalStatus('Entry deleted.', 'success');
+        await loadSalaryData();
+        const code = document.getElementById('historyStaffName').dataset.staffCode;
+        if (code && document.getElementById('salaryHistoryModal').classList.contains('show')) openSalaryHistoryModal(code);
+    } catch (err) {
+        showGlobalStatus('Error deleting entry: ' + err.message, 'error');
+    }
+}
+
+async function loadHistoryAdjustments(staffId) {
+    const tbody = document.getElementById('historyAdjBody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">Loading…</td></tr>';
+    const rows = await fetchAdjustments([currentSalaryMonth], staffId);
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">No other income or deductions for this month.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map(a => {
+        const isInc = a.kind === 'income';
+        return `<tr>
+            <td><span style="font-weight:600;color:${isInc ? '#16a34a' : '#dc2626'};">${isInc ? '➕ Income' : '➖ Deduction'}</span></td>
+            <td>${escapeHtml(a.title || '—')}</td>
+            <td class="salary-amount" style="color:${isInc ? '#16a34a' : '#dc2626'};">${isInc ? '+' : '−'}${formatCurrency(a.amount)}</td>
+            <td style="font-size:12px;color:#64748b;">${escapeHtml(a.notes || '—')}</td>
+            <td style="text-align:right;white-space:nowrap;">
+                <button class="action-btn edit" title="Edit" onclick='openEditAdjustment(${JSON.stringify(a)})'>✏️</button>
+                <button class="action-btn delete" title="Delete" onclick='deleteAdjustment(${JSON.stringify(a.id)})'>🗑️</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+/* ================================================================
    SALARY HISTORY MODAL
    ================================================================ */
 async function openSalaryHistoryModal(staffId) {
@@ -4941,6 +5228,9 @@ async function openSalaryHistoryModal(staffId) {
 
     document.getElementById('historyPrevDue').textContent = formatCurrency(staff.previousDue);
     document.getElementById('historyTotalPayable').textContent = formatCurrency(staff.payable);
+    document.getElementById('historyIncome').textContent = formatCurrency(staff.income);
+    document.getElementById('historyDeduction').textContent = formatCurrency(staff.deduction);
+    loadHistoryAdjustments(staffId);
     document.getElementById('historyTotalCollected').textContent = formatCurrency(staff.collected);
     document.getElementById('historyBalance').textContent = formatCurrency(Math.max(0, staff.balance));
 
@@ -5016,6 +5306,7 @@ function openEditSalaryCollection(collection) {
 
     document.getElementById('collectAmount').value = collection.amount;
     document.getElementById('collectDate').value = collection.collected_date || '';
+    document.getElementById('collectDateHint').textContent = '';
     document.getElementById('collectTime').value = collection.collected_time || '';
     document.getElementById('collectPaidBy').value = collection.paid_by || '';
     document.getElementById('collectNotes').value = collection.notes || '';
@@ -5154,7 +5445,15 @@ async function printSalaryStatement() {
 
     const dailyRate = Number(staff.daily_rate || 0);
     const stmtHistory = await loadRateHistory();
-    const prevPayable = sumPayable(stmtHistory, staffCode, prevAttRows, dailyRate);
+    const stmtAdj = await fetchAdjustments([monthValue, prevMonthValue], staffCode);
+    const prevAdjT = sumAdjustments(stmtAdj, staffCode, prevMonthValue);
+    const prevPayable = netPayable(sumPayable(stmtHistory, staffCode, prevAttRows, dailyRate), prevAdjT.income, prevAdjT.deduction);
+    const curAdjRows = stmtAdj.filter(a => a.salary_month === monthValue);
+    const payableRowsHtml = curAdjRows.length
+        ? `<tr><td>Attendance Earnings</td><td class="right mono">₹${Number(staff.earned || 0).toLocaleString('en-IN')}</td></tr>`
+          + curAdjRows.map(a => `<tr><td>${a.kind === 'income' ? '+ Other Income' : '− Deduction'}: ${escapeHtml(a.title || '')}</td><td class="right mono" style="color:${a.kind === 'income' ? '#15803d' : '#b91c1c'};">${a.kind === 'income' ? '+' : '−'}₹${Number(a.amount || 0).toLocaleString('en-IN')}</td></tr>`).join('')
+          + `<tr><td><strong>Net Payable (Current)</strong></td><td class="right mono"><strong>₹${staff.payable.toLocaleString('en-IN')}</strong></td></tr>`
+        : `<tr><td>Current Payable</td><td class="right mono">₹${staff.payable.toLocaleString('en-IN')}</td></tr>`;
     const oldBalance = Math.max(0, prevPayable - prevCollected);
 
     const currentPayable = staff.payable;
@@ -5225,7 +5524,7 @@ async function printSalaryStatement() {
             </tr>
         </thead>
         <tbody>
-            <tr><td>Current Payable</td><td class="right mono">₹${currentPayable.toLocaleString('en-IN')}</td></tr>
+            ${payableRowsHtml}
             <tr><td>Previous Balance (Carried Forward)</td><td class="right mono">₹${oldBalance.toLocaleString('en-IN')}</td></tr>
             <tr><td><strong>Total Due</strong></td><td class="right mono"><strong>₹${totalDue.toLocaleString('en-IN')}</strong></td></tr>
             <tr><td>Amount Collected</td><td class="right mono" style="color:#15803d;">₹${currentCollected.toLocaleString('en-IN')}</td></tr>
