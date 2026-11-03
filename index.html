@@ -1867,10 +1867,15 @@ async function fetchAdjustments(months, staffId) {
         if (error) throw error;
         return data || [];
     } catch (err) {
-        const missing = err && (err.code === '42P01' || err.code === 'PGRST205' || /does not exist|schema cache/i.test(err.message || ''));
-        if (missing && !adjustmentsTableWarned) {
+        const msg = (err && err.message) || String(err);
+        const missing = err && (err.code === '42P01' || err.code === 'PGRST205' || /does not exist|schema cache/i.test(msg));
+        const denied = err && (err.code === '42501' || /row-level security|permission denied/i.test(msg));
+        if ((missing || denied) && !adjustmentsTableWarned) {
             adjustmentsTableWarned = true;
-            showGlobalStatus('Note: salary_adjustments table missing. Run salary_adjustments.sql in Supabase to enable Other Income / Deductions.', 'info');
+            showGlobalStatus(denied
+                ? 'Read access denied on salary_adjustments (RLS). Run salary_adjustments.sql in Supabase to add its policies.'
+                : 'Note: salary_adjustments table missing. Run salary_adjustments.sql in Supabase to enable Other Income / Deductions.',
+                denied ? 'error' : 'info');
         }
         console.warn('Adjustments lookup failed:', err);
         return [];
@@ -5489,7 +5494,14 @@ async function saveAdjustment() {
         }
     } catch (err) {
         console.error('Adjustment save error:', err);
-        fail('Error saving: ' + err.message + (/does not exist|schema cache/i.test(err.message || '') ? ' — run salary_adjustments.sql in Supabase first.' : ''));
+        const msg = err.message || String(err);
+        const isMissing = /does not exist|schema cache/i.test(msg);
+        const isRls = err.code === '42501' || /row-level security|permission denied/i.test(msg);
+        fail('Error saving: ' + msg + (isMissing
+            ? ' — run salary_adjustments.sql in Supabase first.'
+            : isRls
+                ? ' — RLS is blocking writes. Run the policy section of salary_adjustments.sql in Supabase, then try again.'
+                : ''));
     } finally {
         btn.disabled = false;
     }
