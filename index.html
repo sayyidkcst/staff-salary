@@ -1255,7 +1255,7 @@ Kerala, India</textarea>
             </div>
 
             <div class="salary-summary" id="salarySummary">
-                <div class="box"><p>Total Payable</p><h2 id="salaryTotalPayable">–</h2></div>
+                <div class="box"><p>Total Salary</p><h2 id="salaryTotalPayable">–</h2></div>
                 <div class="box"><p>Total Collected</p><h2 id="salaryTotalCollected" style="color:#16a34a;">–</h2></div>
                 <div class="box"><p>Outstanding</p><h2 id="salaryTotalOutstanding" style="color:#dc2626;">–</h2></div>
                 <div class="box"><p>Carried Forward</p><h2 id="salaryCarriedForward" style="color:#b45309;">–</h2></div>
@@ -1570,7 +1570,7 @@ Kerala, India</textarea>
 
         <div class="form-row">
             <div>
-                <label>Total Payable (₹)</label>
+                <label>Total Salary (₹)</label>
                 <input id="collectPayable" readonly style="background:#f1f5f9;color:#64748b;">
             </div>
             <div>
@@ -4113,6 +4113,7 @@ async function printHRReport() {
         Object.values(summary).forEach(s => {
             const adjT = sumAdjustments(hrAdj, s.staff_id, monthValue);
             s.payable = netPayable(s.earned, adjT.income, adjT.deduction);
+            s.gross = Number(s.earned || 0) + Number(adjT.income || 0);
             s.balance = Math.max(0, s.payable - s.collected);
         });
 
@@ -4123,6 +4124,7 @@ async function printHRReport() {
         const totalWeekOff = Object.values(summary).reduce((a, s) => a + s.week_off, 0);
         const totalHoursAll = Object.values(summary).reduce((a, s) => a + s.totalHours, 0);
         const totalPayable = Object.values(summary).reduce((a, s) => a + s.payable, 0);
+        const totalGrossSalary = Object.values(summary).reduce((a, s) => a + s.gross, 0);
         const totalCollected = Object.values(summary).reduce((a, s) => a + s.collected, 0);
         const totalOutstanding = Object.values(summary).reduce((a, s) => a + s.balance, 0);
 
@@ -4232,8 +4234,8 @@ async function printHRReport() {
             <div class="value">${formatHours(totalHoursAll)}</div>
         </div>
         <div class="stat-card accent">
-            <div class="label">Total Payable</div>
-            <div class="value">₹${totalPayable.toLocaleString('en-IN')}</div>
+            <div class="label">Total Salary</div>
+            <div class="value">₹${totalGrossSalary.toLocaleString('en-IN')}</div>
         </div>
         <div class="stat-card success">
             <div class="label">Total Collected</div>
@@ -5163,6 +5165,7 @@ async function loadSalaryData() {
 
             return {
                 ...item,
+                gross: Number(item.earned || 0) + Number(adj.income || 0),
                 payable,
                 previousDue: prevDue,
                 income: adj.income,
@@ -5173,11 +5176,12 @@ async function loadSalaryData() {
         });
 
         const totalPayable = salaryData.reduce((sum, s) => sum + s.payable, 0);
+        const totalGrossSalary = salaryData.reduce((sum, s) => sum + s.gross, 0);
         const totalCollected = salaryData.reduce((sum, s) => sum + s.collected, 0);
         const totalOutstanding = salaryData.reduce((sum, s) => sum + Math.max(0, s.balance), 0);
         const totalCarried = salaryData.reduce((sum, s) => sum + s.previousDue, 0);
 
-        document.getElementById('salaryTotalPayable').textContent = formatCurrency(totalPayable);
+        document.getElementById('salaryTotalPayable').textContent = formatCurrency(totalGrossSalary);
         document.getElementById('salaryTotalCollected').textContent = formatCurrency(totalCollected);
         document.getElementById('salaryTotalOutstanding').textContent = formatCurrency(totalOutstanding);
         document.getElementById('salaryCarriedForward').textContent = formatCurrency(totalCarried);
@@ -5266,7 +5270,7 @@ function openCollectSalaryModal(staffId) {
     document.getElementById('collectStaffCode').value = staff.staff_id;
     document.getElementById('collectSalaryMonth').value = currentSalaryMonth;
     document.getElementById('collectStaffName').value = staff.name;
-    document.getElementById('collectPayable').value = staff.payable.toFixed(2);
+    document.getElementById('collectPayable').value = staff.gross.toFixed(2);
     document.getElementById('collectPreviousDue').value = staff.previousDue.toFixed(2);
 
     const outstanding = Math.max(0, staff.balance);
@@ -5634,7 +5638,7 @@ function openEditSalaryCollection(collection) {
     document.getElementById('collectStaffCode').value = collection.staff_id;
     document.getElementById('collectSalaryMonth').value = collection.salary_month || currentSalaryMonth;
     document.getElementById('collectStaffName').value = staff ? staff.name : collection.staff_id;
-    document.getElementById('collectPayable').value = staff ? staff.payable.toFixed(2) : '0.00';
+    document.getElementById('collectPayable').value = staff ? staff.gross.toFixed(2) : '0.00';
     document.getElementById('collectPreviousDue').value = staff ? staff.previousDue.toFixed(2) : '0.00';
 
     document.getElementById('collectAmount').value = collection.amount;
