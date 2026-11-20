@@ -1929,7 +1929,7 @@ async function fetchAdjustments(months, staffId) {
 function sumAdjustments(rows, staffId, month) {
     let income = 0, deduction = 0;
     (rows || []).forEach(a => {
-        if (a.staff_id !== staffId || a.salary_month !== month) return;
+        if (String(a.staff_id) !== String(staffId) || a.salary_month !== month) return;
         const amt = Number(a.amount || 0);
         if (a.kind === 'income') income += amt;
         else if (a.kind === 'deduction') deduction += amt;
@@ -2265,5 +2265,749 @@ function getPrintStyles() {
             padding-top: 40px;
             border-top: 1px solid #1e293b;
         }
-        .sig-block .sig-name {
-            font-size: 11px; font-weight:
+`;
+}
+
+/* ================================================================
+   RESTORED CORE (login, session, navigation, staff list)
+   ================================================================ */
+const $ = id => document.getElementById(id);
+let _staffCache = [];
+
+function setLoggedIn(user) {
+    $('loginScreen').style.display = 'none';
+    const email = user && user.email ? user.email : '—';
+    $('dropdownAdminEmail').textContent = email;
+    loadCompany();
+    loadSalaryDay().then(() => loadStaff()).then(loadAttendance).then(loadSalaryData);
+}
+
+async function doAdminLogin() {
+    const email = $('loginEmail').value.trim();
+    const password = $('loginPassword').value;
+    const err = $('loginError'), btn = $('loginBtn');
+    err.style.display = 'none';
+    if (!email || !password) { err.textContent = 'Enter email and password.'; err.style.display = 'block'; return; }
+    btn.disabled = true; btn.textContent = 'Signing in…';
+    try {
+        const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        setLoggedIn(data.user);
+    } catch (e) {
+        err.textContent = e.message || 'Login failed.'; err.style.display = 'block';
+    } finally {
+        btn.disabled = false; btn.textContent = '🔓 Login';
+    }
+}
+
+function showSection(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === name));
+    document.querySelectorAll('.menu-item').forEach(m => m.classList.toggle('active', m.dataset.section === name));
+    const t = { dashboard:'Dashboard', company:'Company Info', staff:'Staff Details', attendance:'Attendance', salary:'Salary Collection', settings:'Settings' };
+    $('topTitle').textContent = t[name] || name;
+    $('sidebar').classList.remove('open'); $('overlay').classList.remove('show');
+}
+function dropdownGoto(n) { $('profileDropdown').classList.remove('show'); showSection(n); }
+function toggleProfileDropdown(e) { e.stopPropagation(); $('profileDropdown').classList.toggle('show'); $('profileTrigger').classList.toggle('open'); }
+function dropdownLogout() { $('profileDropdown').classList.remove('show'); $('logoutModal').classList.add('show'); }
+function closeLogoutModal() { $('logoutModal').classList.remove('show'); }
+async function confirmLogout() {
+    try { await _supabase.auth.signOut(); } catch (e) {}
+    location.reload();
+}
+function toggleSetting(el) { el.classList.toggle('active'); }
+function toggleDarkMode(el) {
+    el.classList.toggle('active');
+    const on = el.classList.contains('active');
+    document.body.classList.toggle('dark-mode', on);
+    try { localStorage.setItem('staffpro_dark_mode', on ? '1' : '0'); } catch (e) {}
+}
+
+async function loadStaff() {
+    const body = $('staffTableBody');
+    try {
+        const { data, error } = await _supabase.from('staff').select('*').order('id');
+        if (error) throw error;
+        _staffCache = data || [];
+        await loadFaceIds();
+        $('dashTotalStaff').textContent = _staffCache.length;
+        body.innerHTML = _staffCache.map(s => {
+            const joined = String(sf(s, 'joined')).slice(0, 10);
+            const exp = calculateExperience(joined);
+            return `<tr><td>${escapeHtml(staffCode(s))}</td><td>${escapeHtml(staffName(s))}</td>
+              <td>${escapeHtml(sf(s, 'role'))}</td><td>${escapeHtml(sf(s, 'dept'))}</td><td>${escapeHtml(joined)}</td>
+              <td>${exp ? escapeHtml(formatExperience(exp)) : '—'}</td><td>${formatCurrency(rateOf(s))}</td><td><div class="act-row">${actBtn('print','🖨️','Print staff profile',`printStaffProfile('${s.id}')`)}${actBtn('face' + (_faceIds.has(String(sidOf(s))) ? ' enrolled' : ''),'🙂','Face enrollment',`openFaceEnroll('${s.id}')`)}${actBtn('edit','✏️','Edit',`openEditStaff('${s.id}')`)}${actBtn('delete','🗑️','Delete',`openDeleteStaff('${s.id}')`)}</div></td></tr>`;
+        }).join('') || '<tr><td colspan="8" style="text-align:center;color:#94a3b8;">No staff yet.</td></tr>';
+    } catch (e) {
+        body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#dc2626;">Could not load staff: ' + escapeHtml(e.message) + '</td></tr>';
+    }
+}
+
+/* ---------------- ATTENDANCE (restored) ---------------- */
+let _attCols = null, _attView = 'day';
+const ATT_COLORS = { present:'#16a34a', absent:'#dc2626', leave:'#d97706', week_off:'#64748b' };
+function attPill(st) {
+    const k = normalizeStatus(st);
+    if (!k) return '<span style="color:#94a3b8;">Not marked</span>';
+    return `<span style="padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;color:#fff;background:${ATT_COLORS[k] || '#64748b'};">${escapeHtml(k.replace('_',' '))}</span>`;
+}
+function attTime(v) {
+    if (!v) return '—';
+    if (/^\d{1,2}:\d{2}/.test(String(v))) return String(v).slice(0, 5);
+    const d = new Date(v);
+    return isNaN(d) ? escapeHtml(String(v)) : d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+}
+/* column-name tolerant helpers for the attendance table */
+/* which staff column attendance.staff_id points to, and the daily-rate column */
+let _linkKey = 'id';
+const sidOf = s => s[_linkKey] != null ? s[_linkKey] : s.id;
+const sameId = (a, b) => a != null && b != null && String(a) === String(b);
+const RATE_KEYS = ['daily_rate','rate','daily_wage','day_rate','per_day','daily_salary','wage','salary','salary_per_day'];
+function rateOf(s) { for (const k of RATE_KEYS) { const v = Number(s[k]); if (v > 0) return v; } return 0; }
+function resolveLink(rows) {
+    if (!rows.length || !_staffCache.length) return;
+    const ids = new Set(rows.map(r => String(r.staff_id)));
+    const keys = ['id', ...Object.keys(_staffCache[0]).filter(k => k !== 'id')];
+    for (const k of keys) { if (_staffCache.some(s => s[k] != null && ids.has(String(s[k])))) { _linkKey = k; return; } }
+}
+let _attKeys = [];
+const pickKey = (cands, keys) => cands.find(c => keys.includes(c));
+const IN_KEYS = ['check_in','check_in_time','in_time','checkin','time_in'], OUT_KEYS = ['check_out','check_out_time','out_time','checkout','time_out'];
+function attIn(r) { const k = pickKey(IN_KEYS, Object.keys(r)); return k ? r[k] : null; }
+function attOut(r) { const k = pickKey(OUT_KEYS, Object.keys(r)); return k ? r[k] : null; }
+function toMin(v) { if (!v) return null; const t = String(v); if (/^\d{1,2}:\d{2}/.test(t)) return parseInt(t.slice(0, 2), 10) * 60 + parseInt(t.slice(3, 5), 10); const d = new Date(v); return isNaN(d) ? null : d.getTime() / 60000; }
+function attHours(r) {
+    const a = toMin(attIn(r)), b = toMin(attOut(r));
+    return a != null && b != null && b > a ? (b - a) / 60 : null;
+}
+async function fetchAttendance() {
+    const { data, error } = await _supabase.from('attendance').select('*');
+    if (error) throw error;
+    const rows = data || [];
+    if (rows.length) _attKeys = Object.keys(rows[0]);
+    if (!_attCols && rows.length) {
+        const k = Object.keys(rows[0]);
+        _attCols = { date: ['date','attendance_date','att_date','work_date'].find(c => k.includes(c)) || 'date' };
+    }
+    const dc = (_attCols && _attCols.date) || 'date';
+    rows.forEach(r => { r._date = String(r[dc] || '').slice(0, 10); });
+    resolveLink(rows);
+    return rows;
+}
+const SK = {
+    code: ['staff_code','code','emp_code','employee_code','emp_id','employee_id','staff_no','staff_number','staff_id','id_no'],
+    name: ['name','full_name','staff_name','employee_name'],
+    role: ['role','designation','position','job_title'],
+    dept: ['department','dept'],
+    joined: ['joined_date','joined_on','join_date','joined','date_of_joining','doj','joining_date']
+};
+const sf = (s, f) => { const k = pickKey(SK[f], Object.keys(s)); return k && s[k] != null ? s[k] : ''; };
+function staffName(s) { return sf(s, 'name'); }
+function staffCode(s) { return sf(s, 'code') || s.id; }
+async function loadAttendance() {
+    const dayBody = $('attendanceTableBody'), dashBody = $('dashboardAttendanceBody');
+    try {
+        if (!_staffCache.length) await loadStaff();
+        const rows = await fetchAttendance();
+        const date = $('attendanceDate').value;
+        const byStaff = {};
+        rows.filter(r => r._date === date).forEach(r => { byStaff[String(r.staff_id)] = r; });
+        let pres = 0, abs = 0, lv = 0, dash = '';
+        dayBody.innerHTML = _staffCache.map(s => {
+            const r = byStaff[String(sidOf(s))], st = r ? normalizeStatus(r.status) : '';
+            if (st === 'present') pres++; else if (st === 'absent') abs++; else if (st === 'leave') lv++;
+            const hrs = r ? attHours(r) : null;
+            if (r) dash += `<tr><td>${escapeHtml(staffName(s))}</td><td>${attTime(attIn(r))}</td><td>${hrs ? formatHours(hrs) : '—'}</td><td>${attPill(r.status)}</td></tr>`;
+            return `<tr><td>${escapeHtml(staffCode(s))}</td><td>${escapeHtml(staffName(s))}</td><td>${attTime(r && attIn(r))}</td><td>${attTime(r && attOut(r))}</td><td>${hrs ? formatHours(hrs) : '—'}</td><td>${attPill(r && r.status)}</td><td></td></tr>`;
+        }).join('') || '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">No staff.</td></tr>';
+        $('attPresentToday').textContent = pres; $('attAbsentToday').textContent = abs; $('attOnLeave').textContent = lv;
+        if (date === new Date().toISOString().slice(0, 10)) {
+            $('dashPresentToday').textContent = pres; $('dashAbsent').textContent = abs; $('dashOnLeave').textContent = lv;
+            dashBody.innerHTML = dash || '<tr><td colspan="4" style="text-align:center;color:#94a3b8;">No attendance marked today.</td></tr>';
+        }
+        renderAttendanceMonth(rows);
+    } catch (e) {
+        const msg = '<tr><td colspan="7" style="text-align:center;color:#dc2626;">Could not load attendance: ' + escapeHtml(e.message || String(e)) + '</td></tr>';
+        dayBody.innerHTML = msg; dashBody.innerHTML = msg;
+    }
+}
+function renderAttendanceMonth(rows) {
+    const m = $('attendanceMonth').value;
+    if (!m) return;
+    const mr = rows.filter(r => r._date.startsWith(m));
+    let tp = 0, ta = 0, th = 0; const days = {};
+    $('monthStaffBody').innerHTML = _staffCache.map(s => {
+        const c = { present:0, absent:0, leave:0, week_off:0, hrs:0, n:0 };
+        mr.filter(r => sameId(r.staff_id, sidOf(s))).forEach(r => {
+            const k = normalizeStatus(r.status); c.n++; if (c[k] !== undefined) c[k]++;
+            c.hrs += attHours(r) || 0;
+        });
+        tp += c.present; ta += c.absent; th += c.hrs;
+        return `<tr><td>${escapeHtml(staffCode(s))}</td><td>${escapeHtml(staffName(s))}</td><td>${c.present}</td><td>${c.absent}</td><td>${c.leave}</td><td>${c.week_off}</td><td>${formatHours(c.hrs)}</td><td>${c.n}</td><td><div class="act-row">${actBtn('','🔍','Monthly detail',`openStaffDetail('${s.id}')`)}</div></td></tr>`;
+    }).join('') || '<tr><td colspan="9" style="text-align:center;color:#94a3b8;">No staff.</td></tr>';
+    mr.forEach(r => {
+        const d = days[r._date] = days[r._date] || { p:0, a:0, l:0, h:0, n:0 }, k = normalizeStatus(r.status);
+        d.n++; d.h += attHours(r) || 0;
+        if (k === 'present') d.p++; else if (k === 'absent') d.a++; else if (k === 'leave') d.l++;
+    });
+    $('monthTotalPresent').textContent = tp; $('monthTotalAbsent').textContent = ta; $('monthTotalHours').textContent = formatHours(th);
+    $('monthDailyBody').innerHTML = Object.keys(days).sort().map(k => { const d = days[k];
+        return `<tr><td>${k}</td><td>${d.p}</td><td>${d.a}</td><td>${d.l}</td><td>${formatHours(d.h)}</td><td>${d.n}</td></tr>`; }).join('')
+        || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No records this month.</td></tr>';
+}
+function switchAttendanceView(v) {
+    _attView = v;
+    $('attendanceDayView').style.display = v === 'day' ? '' : 'none';
+    $('attendanceMonthView').style.display = v === 'month' ? '' : 'none';
+    $('tabDay').classList.toggle('active', v === 'day'); $('tabMonth').classList.toggle('active', v === 'month');
+}
+(function () {
+    const t = new Date().toISOString().slice(0, 10);
+    $('attendanceDate').value = t; $('attendanceMonth').value = t.slice(0, 7);
+    $('attendanceDate').addEventListener('change', loadAttendance);
+    $('attendanceMonth').addEventListener('change', loadAttendance);
+})();
+
+/* ---------------- MARK ATTENDANCE (restored) ---------------- */
+async function markAttendance() {
+    if (!_staffCache.length) await loadStaff();
+    $('markStaffSelect').innerHTML = '<option value="">— Select staff —</option>' +
+        _staffCache.map(s => `<option value="${s.id}">${escapeHtml(staffCode(s))} · ${escapeHtml(staffName(s))}</option>`).join('');
+    $('markDate').value = $('attendanceDate').value || new Date().toISOString().slice(0, 10);
+    $('markStatus').value = 'present'; $('markCheckIn').value = ''; $('markCheckOut').value = ''; $('markWorkingHours').value = '';
+    $('markAttendanceModal').classList.add('show');
+}
+function closeMarkModal() { $('markAttendanceModal').classList.remove('show'); }
+function updateMarkHours() {
+    const d = $('markDate').value, a = $('markCheckIn').value, b = $('markCheckOut').value;
+    const h = a && b ? calculateWorkingHours(`${d}T${a}:00`, `${d}T${b}:00`) : null;
+    $('markWorkingHours').value = h ? formatHours(h) : '';
+}
+['markDate','markCheckIn','markCheckOut'].forEach(id => $(id).addEventListener('change', updateMarkHours));
+async function saveAttendance() {
+    const staffId = $('markStaffSelect').value, date = $('markDate').value, status = $('markStatus').value;
+    const a = $('markCheckIn').value, b = $('markCheckOut').value;
+    let box = $('markError');
+    if (!box) { box = document.createElement('div'); box.id = 'markError'; box.style.cssText = 'color:#dc2626;font-size:13px;margin:8px 0;';
+        $('markSaveBtn').parentNode.parentNode.insertBefore(box, $('markSaveBtn').parentNode); }
+    box.textContent = '';
+    if (!staffId || !date) { box.textContent = 'Select a staff member and a date.'; return; }
+    const st = _staffCache.find(x => String(x.id) === staffId), sid = sidOf(st);
+    const btn = $('markSaveBtn'); btn.disabled = true;
+    try {
+        const rows = await fetchAttendance();
+        const keys = _attKeys.length ? _attKeys : null;     // real column names, when the table already has rows
+        const has = k => !keys || keys.includes(k);
+        const kIn = (keys && pickKey(IN_KEYS, keys)) || 'check_in', kOut = (keys && pickKey(OUT_KEYS, keys)) || 'check_out';
+        const dKey = (_attCols && _attCols.date) || 'date';
+        const iso = t => t ? new Date(`${date}T${t}:00`).toISOString() : null;
+        const hrs = a && b ? (new Date(`${date}T${b}:00`) - new Date(`${date}T${a}:00`)) / 3600000 : null;
+        const mk = (inV, outV) => {
+            const rec = { staff_id: sid, [dKey]: date, status, [kIn]: inV, [kOut]: outV };
+            if (keys) {
+                ['working_hours','hours','work_hours'].forEach(k => { if (keys.includes(k)) rec[k] = hrs && hrs > 0 ? Math.round(hrs * 100) / 100 : null; });
+                if (keys.includes('staff_code')) rec.staff_code = staffCode(st);
+                if (keys.includes('staff_name')) rec.staff_name = staffName(st);
+            }
+            return rec;
+        };
+        const variants = [mk(iso(a), iso(b)), mk(a ? a + ':00' : null, b ? b + ':00' : null)];
+        const old = rows.find(r => sameId(r.staff_id, sid) && r._date === date);
+        const errs = [];
+        for (const rec of variants) {
+            const { error } = old ? await _supabase.from('attendance').update(rec).eq('id', old.id)
+                                  : await _supabase.from('attendance').insert(rec);
+            if (!error) { closeMarkModal(); showGlobalStatus('Attendance saved.', 'info'); loadAttendance(); return; }
+            if (!errs.includes(error.message)) errs.push(error.message);
+        }
+        const seen = [...new Set(rows.map(r => r.staff_id))].slice(0, 4).join(', ') || 'none yet';
+        box.textContent = 'Could not save: ' + errs.join(' | ') + (/foreign key/i.test(errs.join()) ? `  [staff_id sent: ${sid}; existing attendance uses: ${seen}; staff columns: ${Object.keys(st).join(', ')}]` : '');
+    } catch (e) { box.textContent = 'Could not save: ' + (e.message || e); }
+    finally { btn.disabled = false; }
+}
+
+/* ---------------- SALARY COLLECTION (restored) ---------------- */
+const money = n => formatCurrency(Math.round(Number(n || 0) * 100) / 100);
+let _collTable = null, _collRows = [], _adjRows = [], _salMonth = '', _salCalc = {};
+async function loadCollections() {
+    const names = _collTable ? [_collTable] : ['salary_collections','salary_collection','salary_payments','salary_paid','salary_transactions','staff_salary_payments','collections'];
+    for (const t of names) {
+        const r = await _supabase.from(t).select('*');
+        if (r.error) continue;
+        _collTable = t;
+        return (r.data || []).map(c => {
+            const k = Object.keys(c);
+            const mk = pickKey(['salary_month','month','for_month','pay_month'], k), ak = pickKey(['amount','paid_amount','collected_amount','paid','collected'], k);
+            const dk = pickKey(['collected_date','paid_date','payment_date','date','created_at'], k);
+            c._month = String((mk && c[mk]) || (dk && c[dk]) || '').slice(0, 7);
+            c._amt = Number((ak && c[ak]) || 0);
+            return c;
+        });
+    }
+    showGlobalStatus('Salary collection table not found (tried salary_collections, salary_payments, …). Tell me the real table name.', 'error');
+    return [];
+}
+async function loadSalaryData() {
+    const month = $('salaryMonth').value, body = $('salaryTableBody');
+    if (!month) return;
+    body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">Loading…</td></tr>';
+    try {
+        if (!_staffCache.length) await loadStaff();
+        const [att, hist] = await Promise.all([fetchAttendance(), loadRateHistory()]);
+        const months = [...new Set(att.map(r => r._date.slice(0, 7)).filter(m => m && m <= month).concat(month))].sort();
+        const adj = await fetchAdjustments(months, null);
+        const col = await loadCollections(); _collRows = col; _adjRows = adj; _salMonth = month;
+        const T = { pay:0, got:0, out:0, prev:0, inc:0, ded:0 };
+        body.innerHTML = _staffCache.map(s => {
+            const rate = rateOf(s);
+            let prevDue = 0, payable = 0, collected = 0, inc = 0, ded = 0; const det = [];
+            months.forEach(m => {
+                const recs = att.filter(r => sameId(r.staff_id, sidOf(s)) && r._date.startsWith(m)).map(r => ({ status: r.status, date: r._date }));
+                const ad = sumAdjustments(adj, sidOf(s), m);
+                const net = netPayable(sumPayable(hist, sidOf(s), recs, rate), ad.income, ad.deduction);
+                const got = col.filter(c => sameId(c.staff_id, sidOf(s)) && c._month === m).reduce((t, c) => t + c._amt, 0);
+                det.push({ m, net, got });
+                if (m < month) prevDue += net - got; else { payable = net; collected = got; inc = ad.income; ded = ad.deduction; }
+            });
+            const balance = prevDue + payable - collected;
+            _salCalc[String(s.id)] = { s, det, prevDue, payable, collected, balance, inc, ded };
+            T.pay += payable; T.got += collected; T.out += balance; T.prev += prevDue; T.inc += inc; T.ded += ded;
+            return `<tr><td>${escapeHtml(staffCode(s))}</td><td>${escapeHtml(staffName(s))}</td><td>${money(payable)}</td><td>${money(prevDue)}</td><td>${money(collected)}</td><td>${money(balance)}</td><td><div class="act-row">${actBtn('','💰','Collect salary',`openCollect('${s.id}')`)}${actBtn('','📋','Salary history',`openHistory('${s.id}')`)}</div></td></tr>`;
+        }).join('') || '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">No staff.</td></tr>';
+        if (!T.pay && att.length && _staffCache.length) {
+            const s0 = _staffCache[0];
+            showGlobalStatus(`Payable is 0. Staff columns: ${Object.keys(s0).join(', ')}. Rate found: ${rateOf(s0)}. Attendance links via staff.${_linkKey}. Statuses seen: ${[...new Set(att.map(r => r.status))].slice(0, 5).join(', ')}`, 'error');
+        }
+        $('salaryTotalPayable').textContent = money(T.pay); $('salaryTotalCollected').textContent = money(T.got);
+        $('salaryTotalOutstanding').textContent = money(T.out); $('salaryCarriedForward').textContent = money(T.prev);
+        $('salaryTotalIncome').textContent = money(T.inc); $('salaryTotalDeduction').textContent = money(T.ded);
+        $('salaryStatusPill').textContent = monthLabel(month) + ' · settles ' + getSettlementDate(month);
+    } catch (e) {
+        body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#dc2626;">Could not load salary: ' + escapeHtml(e.message || String(e)) + '</td></tr>';
+    }
+}
+$('salaryMonth').value = new Date().toISOString().slice(0, 7);
+
+/* ---------------- COMPANY INFO (restored) ---------------- */
+let _company = { table: null, row: null, rows: [], kv: false };
+const COMPANY_FIELDS = [
+    ['companyName', ['name','company_name'], 'name', /name|title/], ['companyReg', ['registration_number','reg_no','registration_no','reg_number','registration'], 'registration_number', /reg/],
+    ['companyPhone', ['phone','phone_number','mobile'], 'phone', /phone|mobile|contact|tel|whatsapp/], ['companyEmail', ['email','email_address'], 'email', /mail/],
+    ['companyWebsite', ['website','web'], 'website', /web|url|site/], ['companyGstin', ['gstin','gst','gst_number'], 'gstin', /gst|tax|vat/],
+    ['companyAddress', ['address','company_address'], 'address', /addr|location/]
+];
+/* map each form field to a column of the row (exact name first, then fuzzy) */
+function companyMap(row) {
+    const keys = Object.keys(row).filter(k => !['id','created_at','updated_at','uuid','company_id'].includes(k)), used = new Set(), map = {};
+    COMPANY_FIELDS.forEach(([id, cands]) => { const k = cands.find(c => keys.includes(c) && !used.has(c)); if (k) { map[id] = k; used.add(k); } });
+    COMPANY_FIELDS.forEach(([id, , , rx]) => { if (map[id]) return; const k = keys.find(c => !used.has(c) && rx.test(c.toLowerCase())); if (k) { map[id] = k; used.add(k); } });
+    return map;
+}
+/* key/value layout: one row per setting */
+function companyKvMap(rows, kk) {
+    const map = {};
+    COMPANY_FIELDS.forEach(([id, cands, , rx]) => { const r = rows.find(r => cands.includes(String(r[kk]).toLowerCase())) || rows.find(r => rx.test(String(r[kk]).toLowerCase())); if (r) map[id] = r; });
+    return map;
+}
+async function loadCompany() {
+    for (const t of ['company_info','company','companies','company_settings','company_details']) {
+        const r = await _supabase.from(t).select('*');
+        if (r.error) continue;
+        const rows = r.data || [], row = rows[0] || null;
+        const kk = row && pickKey(['key','setting_key','field','setting','label'], Object.keys(row)), vk = row && pickKey(['value','setting_value','val'], Object.keys(row));
+        _company = { table: t, row, rows, kv: !!(kk && vk), kk, vk };
+        if (_company.kv) { const m = companyKvMap(rows, kk); Object.keys(m).forEach(id => { if (m[id][vk] != null) $(id).value = m[id][vk]; }); }
+        else if (row) { const m = companyMap(row); Object.keys(m).forEach(id => { if (row[m[id]] != null) $(id).value = row[m[id]]; }); }
+        if ($('companyName').value) $('companyLogoName').textContent = $('companyName').value;
+        return;
+    }
+    showGlobalStatus('Company info table not found (tried company_info, company, companies). Tell me the table name.', 'error');
+}
+async function saveCompany() {
+    const btn = document.querySelector('#company [onclick="saveCompany()"]');
+    let box = $('companyMsg');
+    if (!box) { box = document.createElement('div'); box.id = 'companyMsg'; box.style.cssText = 'margin-top:12px;font-size:13px;font-weight:600;'; btn.insertAdjacentElement('afterend', box); }
+    const say = (t, ok) => { box.style.color = ok ? '#16a34a' : '#dc2626'; box.textContent = t; };
+    say('Saving…', true); btn.disabled = true;
+    try {
+        if (!_company.table) await loadCompany();
+        if (!_company.table) throw new Error('Company table not found (tried company_info, company, companies, company_settings, company_details).');
+        const { table: t, row, rows } = _company, val = id => $(id).value;
+        if (_company.kv) {
+            const m = companyKvMap(rows, _company.kk);
+            for (const [id, , def] of COMPANY_FIELDS) {
+                const r = m[id];
+                const q = r ? _supabase.from(t).update({ [_company.vk]: val(id) }).eq(r.id != null ? 'id' : _company.kk, r.id != null ? r.id : r[_company.kk]).select()
+                            : _supabase.from(t).insert({ [_company.kk]: def, [_company.vk]: val(id) }).select();
+                const { error } = await q; if (error) throw error;
+            }
+        } else if (row) {
+            const map = companyMap(row), rec = {};
+            Object.keys(map).forEach(id => { rec[map[id]] = val(id); });
+            if (!Object.keys(rec).length) throw new Error('No company field matches a column. This table\'s columns are: ' + Object.keys(row).join(', '));
+            const idKey = pickKey(['id', 'company_id', 'uuid'], Object.keys(row));
+            let q = _supabase.from(t).update(rec);
+            q = idKey ? q.eq(idKey, row[idKey]) : q.not(Object.keys(row)[0], 'is', null);
+            const { data, error } = await q.select();
+            if (error) throw error;
+            if (!data || !data.length) throw new Error('Nothing was updated — the database blocked the change (permission / RLS policy on table ' + t + ').');
+        } else {
+            const rec = {}; COMPANY_FIELDS.forEach(([id, , def]) => { rec[def] = val(id); });
+            const { error } = await _supabase.from(t).insert(rec).select();
+            if (error) throw new Error(error.message + ' (the table is empty, so I could only guess column names: ' + Object.keys(rec).join(', ') + ')');
+        }
+        $('companyLogoName').textContent = $('companyName').value;
+        await loadCompany();
+        say('✅ Company info saved.', true); showGlobalStatus('Company info saved.', 'info');
+    } catch (e) { say('Could not save: ' + (e.message || e), false); }
+    finally { btn.disabled = false; }
+}
+
+/* ---------------- SALARY DATE + SETTLEMENT (restored) ---------------- */
+let _salaryDay = 0, _settingRows = [];
+function getSavedSalaryDay() { return _salaryDay || 0; }
+async function loadSalaryDay() {
+    try {
+        const r = await _supabase.from('app_settings').select('*');
+        if (r.error) throw r.error;
+        _settingRows = r.data || [];
+        const kv = _settingRows.find(x => (x.key || x.setting_key || x.name) === 'salary_day');
+        const v = kv ? (kv.value ?? kv.setting_value) : (_settingRows[0] && _settingRows[0].salary_day);
+        _salaryDay = parseInt(v, 10) || 0;
+    } catch (e) { _salaryDay = 0; }
+    if (!_salaryDay) { try { _salaryDay = parseInt(localStorage.getItem('staffpro_salary_day'), 10) || 0; } catch (e) {} }
+    $('salaryDayInput').value = _salaryDay || '';
+    renderSalaryCountdown(_salaryDay);
+}
+function renderSalaryCountdown(day) {
+    day = parseInt(day, 10) || 0;
+    document.querySelectorAll('.js-salary-countdown').forEach(el => {
+        const compact = el.dataset.compact === '1';
+        el.classList.remove('today', 'soon', 'unset');
+        if (!day || day < 1 || day > 31) {
+            el.classList.add('unset');
+            el.innerHTML = `<div class="sc-icon">💰</div><div class="sc-body"><div class="sc-label">Salary date</div><div class="sc-main">Not set</div></div><button class="sc-action" onclick="showSection('settings')">Set date</button>`;
+            return;
+        }
+        const now = new Date(); now.setHours(0, 0, 0, 0);
+        const pick = (y, m) => new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+        let next = pick(now.getFullYear(), now.getMonth());
+        if (next < now) next = pick(now.getFullYear(), now.getMonth() + 1);
+        const days = Math.round((next - now) / 86400000);
+        el.classList.add(days === 0 ? 'today' : days <= 3 ? 'soon' : 'x'); 
+        el.classList.remove('x');
+        const when = next.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+        el.innerHTML = `<div class="sc-icon">💰</div><div class="sc-body"><div class="sc-label">Next salary</div><div class="sc-main">${days === 0 ? 'Today' : days + (days === 1 ? ' day left' : ' days left')}</div><div class="sc-sub">${when}</div></div>`;
+    });
+}
+function previewSalaryCountdown() { renderSalaryCountdown($('salaryDayInput').value); }
+async function saveSettings() {
+    const day = parseInt($('salaryDayInput').value, 10);
+    if ($('salaryDayInput').value !== '' && !(day >= 1 && day <= 31)) { showGlobalStatus('Salary date must be between 1 and 31.', 'error'); return; }
+    _salaryDay = day || 0;
+    try { localStorage.setItem('staffpro_salary_day', String(_salaryDay)); } catch (e) {}
+    const kv = _settingRows.find(x => (x.key || x.setting_key || x.name) === 'salary_day');
+    let q;
+    if (kv) q = _supabase.from('app_settings').update({ value: String(_salaryDay) }).eq('id', kv.id);
+    else if (_settingRows[0] && 'salary_day' in _settingRows[0]) q = _supabase.from('app_settings').update({ salary_day: _salaryDay }).eq('id', _settingRows[0].id);
+    else q = _supabase.from('app_settings').insert({ key: 'salary_day', value: String(_salaryDay) });
+    const { error } = await q;
+    renderSalaryCountdown(_salaryDay);
+    if (error) showGlobalStatus('Saved in this browser only, database error: ' + error.message, 'error');
+    else { showGlobalStatus('Settings saved.', 'info'); loadSalaryDay(); }
+}
+
+/* ---------------- STAFF CRUD, MONTH DETAIL, COLLECT, HISTORY (restored) ---------------- */
+const actBtn = (cls, ic, tt, fn) => `<button class="action-btn ${cls}" title="${tt}" onclick="${fn}">${ic}</button>`;
+(function () { const st = document.createElement('style'); st.textContent = '.act-row{display:flex;gap:6px;justify-content:flex-end}'; document.head.appendChild(st); })();
+const fk = (row, cands, def) => (row && pickKey(cands, Object.keys(row))) || def;
+const findStaff = id => _staffCache.find(x => String(x.id) === String(id));
+function staffRec(prefix) {
+    const r = _staffCache[0], f = id => $(prefix + id).value.trim(), rec = {};
+    const put = (cands, def, val) => { const k = r ? pickKey(cands, Object.keys(r)) : def; if (k) rec[k] = val; };
+    put(SK.code, 'staff_code', f('Code')); put(SK.name, 'name', f('Name')); put(SK.role, 'role', f('Role'));
+    put(SK.dept, 'department', f('Dept')); put(SK.joined, 'joined_date', f('Joined') || null);
+    put(RATE_KEYS, 'daily_rate', Number(f('Rate') || 0));
+    return rec;
+}
+const staffErr = (what, e) => 'Could not ' + what + ': ' + (e.message || e) + (/column/i.test(e.message || '') && _staffCache[0] ? '  [staff columns: ' + Object.keys(_staffCache[0]).join(', ') + ']' : '');
+async function addRateHistory(staffId, rate, from) {
+    try { await _supabase.from('staff_rate_history').insert({ staff_id: staffId, daily_rate: rate, effective_from: from }); _rateHistoryCache = null; } catch (e) {}
+}
+function addStaff() { ['Code','Name','Role','Dept','Joined','Rate'].forEach(k => $('addStaff' + k).value = ''); $('addStaffJoined').value = new Date().toISOString().slice(0, 10); $('addStaffModal').classList.add('show'); }
+function closeAddModal() { $('addStaffModal').classList.remove('show'); }
+async function saveNewStaff() {
+    if (!$('addStaffName').value.trim()) { showGlobalStatus('Enter the staff name.', 'error'); return; }
+    const rec = staffRec('addStaff'), btn = $('addStaffSaveBtn'); btn.disabled = true;
+    try {
+        const { data, error } = await _supabase.from('staff').insert(rec).select();
+        if (error) throw error;
+        const row = data && data[0], rate = Number($('addStaffRate').value || 0);
+        if (row && rate) await addRateHistory(sidOf(row), rate, $('addStaffJoined').value || new Date().toISOString().slice(0, 10));
+        closeAddModal(); showGlobalStatus('Staff added.', 'info'); await loadStaff(); loadAttendance(); loadSalaryData();
+    } catch (e) { showGlobalStatus(staffErr('add staff', e), 'error'); }
+    finally { btn.disabled = false; }
+}
+function openEditStaff(id) {
+    const s = findStaff(id); if (!s) return;
+    $('editStaffId').value = s.id;
+    $('editStaffCode').value = sf(s, 'code'); $('editStaffName').value = staffName(s);
+    $('editStaffRole').value = sf(s, 'role'); $('editStaffDept').value = sf(s, 'dept');
+    $('editStaffJoined').value = String(sf(s, 'joined')).slice(0, 10);
+    $('editStaffRate').value = rateOf(s) || ''; $('editStaffRateFrom').value = new Date().toISOString().slice(0, 10);
+    $('editStaffModal').classList.add('show');
+}
+function closeEditModal() { $('editStaffModal').classList.remove('show'); }
+async function saveStaffEdit() {
+    const id = $('editStaffId').value, s = findStaff(id); if (!s) return;
+    const rec = staffRec('editStaff'), newRate = Number($('editStaffRate').value || 0), oldRate = rateOf(s);
+    try {
+        const { error } = await _supabase.from('staff').update(rec).eq('id', s.id);
+        if (error) throw error;
+        if (newRate !== oldRate) await addRateHistory(sidOf(s), newRate, $('editStaffRateFrom').value || new Date().toISOString().slice(0, 10));
+        closeEditModal(); showGlobalStatus('Staff updated.', 'info'); await loadStaff(); loadAttendance(); loadSalaryData();
+    } catch (e) { showGlobalStatus(staffErr('update staff', e), 'error'); }
+}
+function openDeleteStaff(id) { const s = findStaff(id); if (!s) return; $('deleteStaffId').value = s.id; $('deleteStaffName').textContent = staffName(s); $('deleteStaffModal').classList.add('show'); }
+function closeDeleteModal() { $('deleteStaffModal').classList.remove('show'); }
+async function confirmDeleteStaff() {
+    const { error } = await _supabase.from('staff').delete().eq('id', $('deleteStaffId').value);
+    closeDeleteModal();
+    if (error) { showGlobalStatus('Could not delete staff: ' + error.message + ' (delete their attendance first if it is linked)', 'error'); return; }
+    showGlobalStatus('Staff deleted.', 'info'); await loadStaff(); loadAttendance(); loadSalaryData();
+}
+
+async function openStaffDetail(id) {
+    const s = findStaff(id); if (!s) return;
+    const m = $('attendanceMonth').value, rows = (await fetchAttendance()).filter(r => sameId(r.staff_id, sidOf(s)) && r._date.startsWith(m));
+    const c = { present:0, absent:0, leave:0, week_off:0 }; let hrs = 0;
+    rows.sort((a, b) => a._date < b._date ? -1 : 1);
+    $('staffDetailBody').innerHTML = rows.map(r => {
+        const k = normalizeStatus(r.status), h = attHours(r); if (c[k] !== undefined) c[k]++; hrs += h || 0;
+        return `<tr><td>${r._date}</td><td>${attTime(attIn(r))}</td><td>${attTime(attOut(r))}</td><td>${h ? formatHours(h) : '—'}</td><td>${attPill(r.status)}</td><td></td></tr>`;
+    }).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No records this month.</td></tr>';
+    $('staffDetailName').textContent = staffName(s); $('staffDetailMeta').textContent = `${staffCode(s)} · ${sf(s, 'role')}`;
+    $('staffDetailMonth').textContent = monthLabel(m);
+    $('staffDetailPresent').textContent = c.present; $('staffDetailAbsent').textContent = c.absent; $('staffDetailLeave').textContent = c.leave;
+    $('staffDetailWeekOff').textContent = c.week_off; $('staffDetailHours').textContent = formatHours(hrs); $('staffDetailTotal').textContent = money(sumPayable(await loadRateHistory(), sidOf(s), rows.map(r => ({ status: r.status, date: r._date })), rateOf(s)));
+    $('staffAttDetailModal').classList.add('show');
+}
+function closeStaffDetailModal() { $('staffAttDetailModal').classList.remove('show'); }
+
+const cf = (c, cands) => { const k = pickKey(cands, Object.keys(c)); return k ? c[k] : ''; };
+function openCollect(id) {
+    const d = _salCalc[String(id)]; if (!d) { showGlobalStatus('Load the salary data first.', 'error'); return; }
+    $('collectEditId').value = ''; $('collectModalTitle').textContent = 'Collect Salary';
+    $('collectStaffCode').value = staffCode(d.s); $('collectStaffName').value = staffName(d.s); $('collectSalaryMonth').value = _salMonth;
+    $('collectPayable').value = money(d.payable); $('collectPreviousDue').value = money(d.prevDue);
+    $('collectAmount').value = Math.max(0, d.balance) || '';
+    $('collectDate').value = new Date().toISOString().slice(0, 10); $('collectTime').value = new Date().toTimeString().slice(0, 5);
+    $('collectPaidBy').value = ''; $('collectNotes').value = ''; $('collectSalaryMessage').textContent = '';
+    $('collectSalaryModal').dataset.staff = String(id); $('collectSalaryModal').classList.add('show');
+}
+function closeCollectSalaryModal() { $('collectSalaryModal').classList.remove('show'); }
+async function saveSalaryCollection() {
+    const id = $('collectSalaryModal').dataset.staff, s = findStaff(id), msg = $('collectSalaryMessage'), amt = Number($('collectAmount').value);
+    if (!s || !(amt > 0)) { msg.style.color = '#dc2626'; msg.textContent = 'Enter an amount greater than 0.'; return; }
+    const r = _collRows[0], rec = {};
+    rec[fk(r, ['staff_id'], 'staff_id')] = sidOf(s);
+    rec[fk(r, ['salary_month','month','for_month','pay_month'], 'salary_month')] = _salMonth;
+    rec[fk(r, ['amount','paid_amount','collected_amount'], 'amount')] = amt;
+    rec[fk(r, ['collected_date','paid_date','payment_date','date'], 'collected_date')] = $('collectDate').value;
+    rec[fk(r, ['collected_time','paid_time','time'], 'collected_time')] = $('collectTime').value || null;
+    rec[fk(r, ['paid_by','payment_mode','mode','method'], 'paid_by')] = $('collectPaidBy').value;
+    rec[fk(r, ['notes','note','remarks'], 'notes')] = $('collectNotes').value;
+    const { error } = await _supabase.from(_collTable || 'salary_collections').insert(rec);
+    if (error) { msg.style.color = '#dc2626'; msg.textContent = 'Could not save: ' + error.message; return; }
+    closeCollectSalaryModal(); showGlobalStatus('Salary collection saved.', 'info'); loadSalaryData();
+}
+function openHistory(id) {
+    const d = _salCalc[String(id)]; if (!d) return;
+    const sid = sidOf(d.s), cols = _collRows.filter(c => sameId(c.staff_id, sid) && c._month === _salMonth);
+    $('historyStaffName').textContent = staffName(d.s); $('historyStaffMeta').textContent = `${staffCode(d.s)} · ${monthLabel(_salMonth)}`;
+    $('historyPrevDue').textContent = money(d.prevDue); $('historyIncome').textContent = money(d.inc); $('historyDeduction').textContent = money(d.ded);
+    $('historyTotalPayable').textContent = money(d.payable); $('historyTotalCollected').textContent = money(d.collected); $('historyBalance').textContent = money(d.balance);
+    $('historyTableBody').innerHTML = cols.map(c => `<tr><td>${escapeHtml(String(cf(c, ['collected_date','paid_date','payment_date','date','created_at'])).slice(0, 10))}</td><td>${escapeHtml(String(cf(c, ['collected_time','paid_time','time'])).slice(0, 5))}</td><td>${money(c._amt)}</td><td>${escapeHtml(cf(c, ['paid_by','payment_mode','mode','method']))}</td><td>${escapeHtml(cf(c, ['notes','note','remarks']))}</td><td></td></tr>`).join('')
+        || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No collections this month.</td></tr>';
+    const adj = _adjRows.filter(a => sameId(a.staff_id, sid) && a.salary_month === _salMonth);
+    $('historyAdjBody').innerHTML = adj.map(a => `<tr><td>${escapeHtml(a.kind || '')}</td><td>${escapeHtml(a.title || '')}</td><td>${money(a.amount)}</td><td>${escapeHtml(a.notes || '')}</td><td></td></tr>`).join('')
+        || '<tr><td colspan="5" style="text-align:center;color:#94a3b8;">None.</td></tr>';
+    $('salaryHistoryModal').classList.add('show');
+}
+function closeSalaryHistoryModal() { $('salaryHistoryModal').classList.remove('show'); }
+
+/* ---------------- PRINT + FACE ENROLLMENT (restored) ---------------- */
+const PRINT_EXTRA = `
+  .profile-card{display:flex;align-items:center;gap:18px;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:20px;background:linear-gradient(135deg,#f8fafc,#eff6ff)}
+  .avatar{width:74px;height:74px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#6d28d9);color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .profile-card h3{font-size:20px;color:#0f172a;margin-bottom:3px}.profile-card .sub{font-size:12px;color:#475569}
+  .badge{display:inline-block;margin-top:8px;padding:3px 12px;border-radius:20px;background:#1e293b;color:#fff;font-size:10px;letter-spacing:1px;text-transform:uppercase}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:8px}
+  .detail-grid div{padding:10px 14px;border-bottom:1px solid #e2e8f0;font-size:12px}.detail-grid div:nth-child(odd){border-right:1px solid #e2e8f0}
+  .detail-grid span{display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.detail-grid b{color:#0f172a;font-size:13px}
+  .signatures{display:flex;justify-content:space-between;gap:30px;margin-top:70px}
+  .doc-foot{margin-top:28px;padding-top:8px;border-top:1px solid #cbd5e1;text-align:center;font-size:9px;color:#94a3b8;letter-spacing:.5px}
+  @media print{body{padding:0}}`;
+function openPrint(title, body, refNo, sigs) {
+    const v = id => escapeHtml($(id).value || ''), co = $('companyName').value || 'Company';
+    const contact = [v('companyPhone'), v('companyEmail'), v('companyWebsite')].filter(Boolean).join('<br>') + ($('companyGstin').value ? `<br><strong>GSTIN:</strong> ${v('companyGstin')}` : '');
+    const sig = (sigs || ['Employee', 'HR / Manager', 'Authorised Signatory']).map(n => `<div class="sig-block"><div class="sig-name">${n}</div></div>`).join('');
+    const html = (`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${getPrintStyles()}${PRINT_EXTRA}</style></head><body>
+      <div class="letterhead"><div class="letterhead-left"><div class="letterhead-logo">${escapeHtml(co.trim().charAt(0).toUpperCase())}</div>
+        <div class="letterhead-company"><h1>${escapeHtml(co)}</h1><p>${v('companyAddress')}</p></div></div>
+        <div class="letterhead-right">${contact}</div></div>
+      <div class="doc-title"><h2>${escapeHtml(title)}</h2></div>
+      <div class="ref-bar"><div><strong>Ref:</strong> ${escapeHtml(refNo || '—')}</div><div><strong>Printed on:</strong> ${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</div></div>
+      ${body}<div class="signatures">${sig}</div>
+      <div class="doc-foot">This is a computer-generated document · ${escapeHtml(co)}</div>
+      </body></html>`);
+    showPrintView(title, html);
+}
+function showPrintView(title, html) {
+    closePrintView();
+    const ov = document.createElement('div'); ov.id = 'printView';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#e2e8f0;display:flex;flex-direction:column;';
+    ov.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#1e293b;color:#fff;flex-shrink:0">
+        <button id="pvBack" style="padding:8px 16px;border:0;border-radius:8px;background:#475569;color:#fff;font-weight:600;cursor:pointer">← Back</button>
+        <div style="flex:1;font-weight:600;font-size:14px">${escapeHtml(title)}</div>
+        <button id="pvPrint" style="padding:8px 18px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer">🖨️ Print</button>
+        <button id="pvClose" style="padding:8px 14px;border:0;border-radius:8px;background:#dc2626;color:#fff;font-weight:600;cursor:pointer">✕ Close</button></div>
+      <iframe id="pvFrame" style="flex:1;border:0;width:100%;background:#fff"></iframe>`;
+    document.body.appendChild(ov);
+    $('pvFrame').srcdoc = html;
+    $('pvBack').onclick = $('pvClose').onclick = closePrintView;
+    $('pvPrint').onclick = () => { const f = $('pvFrame').contentWindow; f.focus(); f.print(); };
+    document.addEventListener('keydown', pvEsc);
+}
+function pvEsc(e) { if (e.key === 'Escape') closePrintView(); }
+function closePrintView() { const o = $('printView'); if (o) o.remove(); document.removeEventListener('keydown', pvEsc); }
+function printStaffProfile(id) {
+    const s = findStaff(id); if (!s) return;
+    const joined = String(sf(s, 'joined')).slice(0, 10), exp = calculateExperience(joined), name = staffName(s) || '—';
+    const initials = name.split(/\s+/).map(x => x[0]).slice(0, 2).join('').toUpperCase();
+    const fmt = d => d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+    const monthly = money(rateOf(s) * 30);
+    const cell = (k, v) => `<div><span>${k}</span><b>${escapeHtml(String(v || '—'))}</b></div>`;
+    openPrint('Staff Profile', `
+      <div class="profile-card"><div class="avatar">${escapeHtml(initials || '?')}</div>
+        <div><h3>${escapeHtml(name)}</h3><div class="sub">${escapeHtml(sf(s, 'role') || 'Staff')}${sf(s, 'dept') ? ' · ' + escapeHtml(sf(s, 'dept')) : ''}</div><span class="badge">ID ${escapeHtml(String(staffCode(s)))}</span></div></div>
+      <div class="stat-grid"><div class="stat-card accent"><div class="label">Monthly salary</div><div class="value">${monthly}</div></div>
+        <div class="stat-card purple"><div class="label">Experience</div><div class="value" style="font-size:14px">${exp ? escapeHtml(formatExperience(exp)) : '—'}</div></div>
+        <div class="stat-card"><div class="label">Joined</div><div class="value" style="font-size:14px">${escapeHtml(fmt(joined))}</div></div></div>
+      <div class="section-header"><div class="section-header-icon">👤</div><h3>Employment Details</h3></div>
+      <div class="detail-grid">${cell('Staff ID', staffCode(s))}${cell('Full name', name)}${cell('Designation', sf(s, 'role'))}${cell('Department', sf(s, 'dept'))}${cell('Date of joining', fmt(joined))}${cell('Monthly salary', monthly)}</div>`,
+      'SP-' + staffCode(s));
+}
+async function printHRReport() {
+    try {
+        if (!_staffCache.length) await loadStaff();
+        const m = $('attendanceMonth').value; if (!m) { showGlobalStatus('Select a month first.', 'error'); return; }
+        const rows = (await fetchAttendance()).filter(r => r._date.startsWith(m));
+        const T = { present:0, absent:0, leave:0, week_off:0, hrs:0 };
+        const body = _staffCache.map(st => {
+            const c = { present:0, absent:0, leave:0, week_off:0, hrs:0, n:0 };
+            rows.filter(r => sameId(r.staff_id, sidOf(st))).forEach(r => { const k = normalizeStatus(r.status); c.n++; if (c[k] !== undefined) c[k]++; c.hrs += attHours(r) || 0; });
+            Object.keys(T).forEach(k => T[k] += c[k]);
+            const pct = c.n ? Math.round((c.present + c.week_off) / c.n * 100) : 0;
+            return `<tr><td>${escapeHtml(String(staffCode(st)))}</td><td><b>${escapeHtml(staffName(st))}</b></td><td>${escapeHtml(sf(st, 'role'))}</td>
+              <td style="text-align:center">${c.present}</td><td style="text-align:center">${c.absent}</td><td style="text-align:center">${c.leave}</td><td style="text-align:center">${c.week_off}</td>
+              <td style="text-align:center">${formatHours(c.hrs)}</td><td style="text-align:center"><b>${c.n ? pct + '%' : '—'}</b></td></tr>`;
+        }).join('');
+        const avg = (T.present + T.absent + T.leave + T.week_off) ? Math.round((T.present + T.week_off) / (T.present + T.absent + T.leave + T.week_off) * 100) : 0;
+        openPrint('HR Attendance Report', `
+          <div class="stat-grid">
+            <div class="stat-card accent"><div class="label">Total staff</div><div class="value">${_staffCache.length}</div></div>
+            <div class="stat-card success"><div class="label">Present days</div><div class="value">${T.present}</div></div>
+            <div class="stat-card danger"><div class="label">Absent days</div><div class="value">${T.absent}</div></div>
+            <div class="stat-card warning"><div class="label">Leave days</div><div class="value">${T.leave}</div></div>
+            <div class="stat-card"><div class="label">Week off</div><div class="value">${T.week_off}</div></div>
+            <div class="stat-card purple"><div class="label">Total hours</div><div class="value" style="font-size:15px">${formatHours(T.hrs)}</div></div>
+            <div class="stat-card accent"><div class="label">Attendance</div><div class="value">${avg}%</div></div></div>
+          <div class="section-header"><div class="section-header-icon">📅</div><h3>Staff Attendance · ${escapeHtml(monthLabel(m))}</h3></div>
+          <table class="data-table"><thead><tr><th>ID</th><th>Name</th><th>Role</th><th class="center">Present</th><th class="center">Absent</th><th class="center">Leave</th><th class="center">Week off</th><th class="center">Hours</th><th class="center">Attendance</th></tr></thead>
+          <tbody>${body || '<tr><td colspan="9" style="text-align:center">No staff.</td></tr>'}</tbody></table>`,
+          'HR-' + m, ['Prepared by', 'HR Manager', 'Authorised Signatory']);
+    } catch (e) { showGlobalStatus('Could not create report: ' + (e.message || e), 'error'); }
+}
+function printHRStaffReport() {
+    const rows = _staffCache.map(s => { const j = String(sf(s, 'joined')).slice(0, 10), e = calculateExperience(j);
+        return `<tr><td>${escapeHtml(staffCode(s))}</td><td>${escapeHtml(staffName(s))}</td><td>${escapeHtml(sf(s, 'role'))}</td><td>${escapeHtml(sf(s, 'dept'))}</td><td>${j}</td><td>${e ? escapeHtml(formatExperience(e)) : ''}</td><td>${money(rateOf(s))}</td></tr>`; }).join('');
+    openPrint('HR Staff Report', `<div class="stat-grid"><div class="stat-card accent"><div class="label">Total staff</div><div class="value">${_staffCache.length}</div></div></div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f1f5f9;text-align:left"><th>ID</th><th>Name</th><th>Role</th><th>Department</th><th>Joined</th><th>Experience</th><th>Daily rate</th></tr></thead><tbody>${rows}</tbody></table>`);
+}
+
+let _faceIds = new Set(), _faceLibP = null, _faceStream = null, _enrollId = null;
+async function loadFaceIds() {
+    try { const r = await _supabase.from('staff_face_descriptors').select('staff_id'); _faceIds = new Set((r.data || []).map(x => String(x.staff_id))); } catch (e) {}
+}
+function loadFaceLib() {
+    if (window.faceapi) return Promise.resolve();
+    return _faceLibP = _faceLibP || new Promise((res, rej) => { const sc = document.createElement('script');
+        sc.src = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js'; sc.onload = res;
+        sc.onerror = () => { _faceLibP = null; rej(new Error('Could not load the face library (check internet).')); }; document.head.appendChild(sc); });
+}
+async function openFaceEnroll(id) {
+    const s = findStaff(id); if (!s) return; _enrollId = s;
+    $('faceEnrollTitle').textContent = 'Face enrollment · ' + staffName(s);
+    $('enrollStatus').textContent = 'Starting camera…'; $('enrollBar').style.width = '0%';
+    $('enrollRemoveBtn').style.display = _faceIds.has(String(sidOf(s))) ? '' : 'none'; $('enrollStartBtn').disabled = false;
+    $('faceEnrollModal').classList.add('show');
+    try { _faceStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }); $('enrollVideo').srcObject = _faceStream; $('enrollVideo').play(); $('enrollStatus').textContent = 'Look at the camera, then press Start.'; }
+    catch (e) { $('enrollStatus').textContent = 'Camera not available: ' + (e.message || e); }
+}
+function closeFaceEnroll() { if (_faceStream) _faceStream.getTracks().forEach(t => t.stop()); _faceStream = null; $('faceEnrollModal').classList.remove('show'); }
+async function startFaceCapture() {
+    const s = _enrollId, st = $('enrollStatus'), btn = $('enrollStartBtn'); if (!s || !_faceStream) return;
+    btn.disabled = true;
+    try {
+        st.textContent = 'Loading face models…'; await loadFaceLib();
+        const M = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+        await Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(M), faceapi.nets.faceLandmark68Net.loadFromUri(M), faceapi.nets.faceRecognitionNet.loadFromUri(M)]);
+        const samples = [];
+        for (let tries = 0; samples.length < 5 && tries < 40; tries++) {
+            const d = await faceapi.detectSingleFace($('enrollVideo'), new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+            if (d) { samples.push(Array.from(d.descriptor)); $('enrollBar').style.width = samples.length * 20 + '%'; st.textContent = `Captured ${samples.length} of 5…`; }
+            else st.textContent = 'No face found — look at the camera.';
+            await new Promise(r => setTimeout(r, 600));
+        }
+        if (samples.length < 5) throw new Error('Could not capture 5 clear samples. Try again with better light.');
+        await _supabase.from('staff_face_descriptors').delete().eq('staff_id', sidOf(s));
+        const { error } = await _supabase.from('staff_face_descriptors').insert(samples.map(d => ({ staff_id: sidOf(s), descriptor: d })));
+        if (error) throw error;
+        st.textContent = '✅ Face saved.'; await loadStaff();
+        $('enrollRemoveBtn').style.display = '';
+    } catch (e) { st.textContent = 'Error: ' + (e.message || e); }
+    finally { btn.disabled = false; }
+}
+async function removeFaceData() {
+    if (!_enrollId) return;
+    const { error } = await _supabase.from('staff_face_descriptors').delete().eq('staff_id', sidOf(_enrollId));
+    $('enrollStatus').textContent = error ? 'Error: ' + error.message : 'Face data removed.';
+    if (!error) { $('enrollRemoveBtn').style.display = 'none'; loadStaff(); }
+}
+
+/* Features whose original code was lost in the truncated file */
+['addStaff','backupData','closeAddModal','closeAdjustModal','closeCollectSalaryModal','closeDeleteAttendanceModal',
+ 'closeDeleteModal','closeEditAttendanceModal','closeEditModal','closeFaceEnroll','closeFaceKiosk','closeMarkModal',
+ 'closeSalaryHistoryModal','closeStaffDetailModal','confirmDeleteAttendance','confirmDeleteSalary','confirmDeleteStaff',
+ 'loadSalaryData','markAttendance','openFaceKiosk','previewSalaryCountdown','printHRReport','printHRStaffReport',
+ 'printSalarySlip','printSalaryStatement','printTimeSheet','removeFaceData','saveAdjustment','saveAttendance','saveCompany',
+ 'saveEditAttendance','saveNewStaff','saveSalaryCollection','saveSettings','saveStaffEdit','startFaceCapture',
+ 'updateAdjustLabels'
+].forEach(n => { if (typeof window[n] !== 'function') window[n] = () => showGlobalStatus('This feature needs to be restored (code was lost in the truncated file).', 'error'); });
+
+document.querySelectorAll('.menu-item').forEach(m => m.addEventListener('click', () => showSection(m.dataset.section)));
+$('mobileMenu').addEventListener('click', () => { $('sidebar').classList.toggle('open'); $('overlay').classList.toggle('show'); });
+$('overlay').addEventListener('click', () => { $('sidebar').classList.remove('open'); $('overlay').classList.remove('show'); });
+document.addEventListener('click', () => $('profileDropdown').classList.remove('show'));
+$('loginPassword').addEventListener('keydown', e => { if (e.key === 'Enter') doAdminLogin(); });
+
+(async () => {
+    try {
+        const { data } = await _supabase.auth.getSession();
+        if (data && data.session) setLoggedIn(data.session.user);
+    } catch (e) {}
+})();
+</script>
+</body>
+</html>
