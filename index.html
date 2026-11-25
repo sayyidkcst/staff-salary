@@ -1274,7 +1274,7 @@ Kerala, India</textarea>
                             <tr>
                                 <th>Staff ID</th>
                                 <th>Name</th>
-                                <th>Payable</th>
+                                <th>Total Salary</th>
                                 <th>Previous Due</th>
                                 <th>Collected</th>
                                 <th>Balance</th>
@@ -2392,6 +2392,7 @@ async function fetchAttendance() {
     const dc = (_attCols && _attCols.date) || 'date';
     rows.forEach(r => { r._date = String(r[dc] || '').slice(0, 10); });
     resolveLink(rows);
+    window._attRows = rows;
     return rows;
 }
 const SK = {
@@ -2418,7 +2419,7 @@ async function loadAttendance() {
             if (st === 'present') pres++; else if (st === 'absent') abs++; else if (st === 'leave') lv++;
             const hrs = r ? attHours(r) : null;
             if (r) dash += `<tr><td>${escapeHtml(staffName(s))}</td><td>${attTime(attIn(r))}</td><td>${hrs ? formatHours(hrs) : '—'}</td><td>${attPill(r.status)}</td></tr>`;
-            return `<tr><td>${escapeHtml(staffCode(s))}</td><td>${escapeHtml(staffName(s))}</td><td>${attTime(r && attIn(r))}</td><td>${attTime(r && attOut(r))}</td><td>${hrs ? formatHours(hrs) : '—'}</td><td>${attPill(r && r.status)}</td><td></td></tr>`;
+            return `<tr><td>${escapeHtml(staffCode(s))}</td><td>${escapeHtml(staffName(s))}</td><td>${attTime(r && attIn(r))}</td><td>${attTime(r && attOut(r))}</td><td>${hrs ? formatHours(hrs) : '—'}</td><td>${attPill(r && r.status)}</td><td>${r ? `<div class="act-row">${actBtn('edit','✏️','Edit',`openEditAttendance('${r.id}')`)}${actBtn('delete','🗑️','Delete',`openDeleteAttendance('${r.id}')`)}</div>` : ''}</td></tr>`;
         }).join('') || '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">No staff.</td></tr>';
         $('attPresentToday').textContent = pres; $('attAbsentToday').textContent = abs; $('attOnLeave').textContent = lv;
         if (date === new Date().toISOString().slice(0, 10)) {
@@ -2526,6 +2527,75 @@ async function saveAttendance() {
     finally { btn.disabled = false; }
 }
 
+/* ---------------- EDIT / DELETE ATTENDANCE ---------------- */
+const attById = id => (window._attRows || []).find(r => String(r.id) === String(id));
+const attTimeInput = v => { if (!v) return ''; const t = String(v); if (/^\d{1,2}:\d{2}/.test(t)) return t.slice(0, 5).padStart(5, '0'); const d = new Date(v); return isNaN(d) ? '' : d.toTimeString().slice(0, 5); };
+function updateEditAttHours() {
+    const d = $('editAttDate').value, a = $('editAttCheckIn').value, b = $('editAttCheckOut').value;
+    const h = a && b ? calculateWorkingHours(`${d}T${a}:00`, `${d}T${b}:00`) : null;
+    $('editAttHours').value = h ? formatHours(h) : '';
+}
+function toggleEditAttTimes() { $('editAttTimeRow').style.display = $('editAttStatus').value === 'present' ? '' : 'none'; }
+$('editAttStatus').addEventListener('change', toggleEditAttTimes);
+['editAttCheckIn', 'editAttCheckOut'].forEach(id => $(id).addEventListener('input', updateEditAttHours));
+function openEditAttendance(id) {
+    const r = attById(id); if (!r) { showGlobalStatus('Record not found. Reload attendance and try again.', 'error'); return; }
+    const st = _staffCache.find(x => sameId(sidOf(x), r.staff_id));
+    $('editAttId').value = r.id; $('editAttStaffCode').value = st ? staffCode(st) : '';
+    $('editAttStaffName').value = st ? staffName(st) : String(r.staff_id);
+    $('editAttDate').value = r._date;
+    const k = normalizeStatus(r.status); $('editAttStatus').value = ['present', 'absent', 'leave', 'week_off'].includes(k) ? k : 'present';
+    $('editAttCheckIn').value = attTimeInput(attIn(r)); $('editAttCheckOut').value = attTimeInput(attOut(r));
+    toggleEditAttTimes(); updateEditAttHours();
+    $('editAttendanceModal').classList.add('show');
+}
+function closeEditAttendanceModal() { $('editAttendanceModal').classList.remove('show'); }
+async function refreshAfterAttendanceChange() {
+    await loadAttendance();
+    const m = $('staffAttDetailModal');
+    if (m.classList.contains('show') && m.dataset.staff) openStaffDetail(m.dataset.staff);
+    if ($('salaryMonth').value) loadSalaryData();
+}
+async function saveEditAttendance() {
+    const r = attById($('editAttId').value); if (!r) return;
+    const status = $('editAttStatus').value, date = r._date, present = status === 'present';
+    const a = present ? $('editAttCheckIn').value : '', b = present ? $('editAttCheckOut').value : '';
+    if (a && b && b <= a) { showGlobalStatus('Check out must be after check in.', 'error'); return; }
+    const keys = Object.keys(r), kIn = pickKey(IN_KEYS, keys) || 'check_in', kOut = pickKey(OUT_KEYS, keys) || 'check_out';
+    const hrs = a && b ? (new Date(`${date}T${b}:00`) - new Date(`${date}T${a}:00`)) / 3600000 : null;
+    const mk = (i, o) => {
+        const rec = { status, [kIn]: i, [kOut]: o };
+        ['working_hours', 'hours', 'work_hours'].forEach(k => { if (keys.includes(k)) rec[k] = hrs && hrs > 0 ? Math.round(hrs * 100) / 100 : null; });
+        return rec;
+    };
+    const iso = t => t ? new Date(`${date}T${t}:00`).toISOString() : null;
+    const btn = $('editAttSaveBtn'); btn.disabled = true;
+    try {
+        const errs = [];
+        for (const rec of [mk(iso(a), iso(b)), mk(a ? a + ':00' : null, b ? b + ':00' : null)]) {
+            const { error } = await _supabase.from('attendance').update(rec).eq('id', r.id);
+            if (!error) { closeEditAttendanceModal(); showGlobalStatus('Attendance updated.', 'info'); await refreshAfterAttendanceChange(); return; }
+            if (!errs.includes(error.message)) errs.push(error.message);
+        }
+        showGlobalStatus('Could not update attendance: ' + errs.join(' | '), 'error');
+    } catch (e) { showGlobalStatus('Could not update attendance: ' + (e.message || e), 'error'); }
+    finally { btn.disabled = false; }
+}
+function openDeleteAttendance(id) {
+    const r = attById(id); if (!r) return;
+    const st = _staffCache.find(x => sameId(sidOf(x), r.staff_id));
+    $('deleteAttId').value = r.id; $('deleteAttName').textContent = st ? staffName(st) : 'this staff'; $('deleteAttDate').textContent = r._date;
+    $('deleteAttendanceModal').classList.add('show');
+}
+function closeDeleteAttendanceModal() { $('deleteAttendanceModal').classList.remove('show'); }
+async function confirmDeleteAttendance() {
+    const id = $('deleteAttId').value;
+    const { error } = await _supabase.from('attendance').delete().eq('id', id);
+    closeDeleteAttendanceModal();
+    if (error) { showGlobalStatus('Could not delete attendance: ' + error.message, 'error'); return; }
+    showGlobalStatus('Attendance record deleted.', 'info'); await refreshAfterAttendanceChange();
+}
+
 /* ---------------- SALARY COLLECTION (restored) ---------------- */
 const money = n => formatCurrency(Math.round(Number(n || 0) * 100) / 100);
 let _collTable = null, _collRows = [], _adjRows = [], _salMonth = '', _salCalc = {};
@@ -2557,28 +2627,29 @@ async function loadSalaryData() {
         const months = [...new Set(att.map(r => r._date.slice(0, 7)).filter(m => m && m <= month).concat(month))].sort();
         const adj = await fetchAdjustments(months, null);
         const col = await loadCollections(); _collRows = col; _adjRows = adj; _salMonth = month;
-        const T = { pay:0, got:0, out:0, prev:0, inc:0, ded:0 };
+        const T = { pay:0, base:0, got:0, out:0, prev:0, inc:0, ded:0 };
         body.innerHTML = _staffCache.map(s => {
             const rate = rateOf(s);
-            let prevDue = 0, payable = 0, collected = 0, inc = 0, ded = 0; const det = [];
+            let prevDue = 0, payable = 0, collected = 0, inc = 0, ded = 0, base = 0; const det = [];
             months.forEach(m => {
                 const recs = att.filter(r => sameId(r.staff_id, sidOf(s)) && r._date.startsWith(m)).map(r => ({ status: r.status, date: r._date }));
                 const ad = sumAdjustments(adj, sidOf(s), m);
-                const net = netPayable(sumPayable(hist, sidOf(s), recs, rate), ad.income, ad.deduction);
+                const earned = sumPayable(hist, sidOf(s), recs, rate);
+                const net = netPayable(earned, ad.income, ad.deduction);
                 const got = col.filter(c => sameId(c.staff_id, sidOf(s)) && c._month === m).reduce((t, c) => t + c._amt, 0);
                 det.push({ m, net, got });
-                if (m < month) prevDue += net - got; else { payable = net; collected = got; inc = ad.income; ded = ad.deduction; }
+                if (m < month) prevDue += net - got; else { payable = net; base = earned; collected = got; inc = ad.income; ded = ad.deduction; }
             });
             const balance = prevDue + payable - collected;
-            _salCalc[String(s.id)] = { s, det, prevDue, payable, collected, balance, inc, ded };
-            T.pay += payable; T.got += collected; T.out += balance; T.prev += prevDue; T.inc += inc; T.ded += ded;
-            return `<tr><td>${escapeHtml(staffCode(s))}</td><td>${escapeHtml(staffName(s))}</td><td>${money(payable)}</td><td>${money(prevDue)}</td><td>${money(collected)}</td><td>${money(balance)}</td><td><div class="act-row">${actBtn('','💰','Collect salary',`openCollect('${s.id}')`)}${actBtn('','📋','Salary history',`openHistory('${s.id}')`)}</div></td></tr>`;
+            _salCalc[String(s.id)] = { s, det, prevDue, payable, base, collected, balance, inc, ded };
+            T.pay += payable; T.base += base; T.got += collected; T.out += balance; T.prev += prevDue; T.inc += inc; T.ded += ded;
+            return `<tr><td>${escapeHtml(staffCode(s))}</td><td>${escapeHtml(staffName(s))}</td><td>${money(base)}</td><td>${money(prevDue)}</td><td>${money(collected)}</td><td>${money(balance)}</td><td><div class="act-row">${actBtn('','💰','Collect salary',`openCollect('${s.id}')`)}${actBtn('','📋','Salary history',`openHistory('${s.id}')`)}</div></td></tr>`;
         }).join('') || '<tr><td colspan="7" style="text-align:center;color:#94a3b8;">No staff.</td></tr>';
         if (!T.pay && att.length && _staffCache.length) {
             const s0 = _staffCache[0];
             showGlobalStatus(`Payable is 0. Staff columns: ${Object.keys(s0).join(', ')}. Rate found: ${rateOf(s0)}. Attendance links via staff.${_linkKey}. Statuses seen: ${[...new Set(att.map(r => r.status))].slice(0, 5).join(', ')}`, 'error');
         }
-        $('salaryTotalPayable').textContent = money(T.pay); $('salaryTotalCollected').textContent = money(T.got);
+        $('salaryTotalPayable').textContent = money(T.base); $('salaryTotalCollected').textContent = money(T.got);
         $('salaryTotalOutstanding').textContent = money(T.out); $('salaryCarriedForward').textContent = money(T.prev);
         $('salaryTotalIncome').textContent = money(T.inc); $('salaryTotalDeduction').textContent = money(T.ded);
         $('salaryStatusPill').textContent = monthLabel(month) + ' · settles ' + getSettlementDate(month);
@@ -2803,12 +2874,13 @@ async function openStaffDetail(id) {
     rows.sort((a, b) => a._date < b._date ? -1 : 1);
     $('staffDetailBody').innerHTML = rows.map(r => {
         const k = normalizeStatus(r.status), h = attHours(r); if (c[k] !== undefined) c[k]++; hrs += h || 0;
-        return `<tr><td>${r._date}</td><td>${attTime(attIn(r))}</td><td>${attTime(attOut(r))}</td><td>${h ? formatHours(h) : '—'}</td><td>${attPill(r.status)}</td><td></td></tr>`;
+        return `<tr><td>${r._date}</td><td>${attTime(attIn(r))}</td><td>${attTime(attOut(r))}</td><td>${h ? formatHours(h) : '—'}</td><td>${attPill(r.status)}</td><td><div class="act-row">${actBtn('edit','✏️','Edit',`openEditAttendance('${r.id}')`)}${actBtn('delete','🗑️','Delete',`openDeleteAttendance('${r.id}')`)}</div></td></tr>`;
     }).join('') || '<tr><td colspan="6" style="text-align:center;color:#94a3b8;">No records this month.</td></tr>';
     $('staffDetailName').textContent = staffName(s); $('staffDetailMeta').textContent = `${staffCode(s)} · ${sf(s, 'role')}`;
     $('staffDetailMonth').textContent = monthLabel(m);
     $('staffDetailPresent').textContent = c.present; $('staffDetailAbsent').textContent = c.absent; $('staffDetailLeave').textContent = c.leave;
     $('staffDetailWeekOff').textContent = c.week_off; $('staffDetailHours').textContent = formatHours(hrs); $('staffDetailTotal').textContent = money(sumPayable(await loadRateHistory(), sidOf(s), rows.map(r => ({ status: r.status, date: r._date })), rateOf(s)));
+    $('staffAttDetailModal').dataset.staff = String(s.id);
     $('staffAttDetailModal').classList.add('show');
 }
 function closeStaffDetailModal() { $('staffAttDetailModal').classList.remove('show'); }
@@ -2818,7 +2890,7 @@ function openCollect(id) {
     const d = _salCalc[String(id)]; if (!d) { showGlobalStatus('Load the salary data first.', 'error'); return; }
     $('collectEditId').value = ''; $('collectModalTitle').textContent = 'Collect Salary';
     $('collectStaffCode').value = staffCode(d.s); $('collectStaffName').value = staffName(d.s); $('collectSalaryMonth').value = _salMonth;
-    $('collectPayable').value = money(d.payable); $('collectPreviousDue').value = money(d.prevDue);
+    $('collectPayable').value = money(d.base); $('collectPreviousDue').value = money(d.prevDue);
     $('collectAmount').value = Math.max(0, d.balance) || '';
     $('collectDate').value = new Date().toISOString().slice(0, 10); $('collectTime').value = new Date().toTimeString().slice(0, 5);
     $('collectPaidBy').value = ''; $('collectNotes').value = ''; $('collectSalaryMessage').textContent = '';
@@ -2840,8 +2912,10 @@ async function saveSalaryCollection() {
     if (error) { msg.style.color = '#dc2626'; msg.textContent = 'Could not save: ' + error.message; return; }
     closeCollectSalaryModal(); showGlobalStatus('Salary collection saved.', 'info'); loadSalaryData();
 }
+let _histId = null;
 function openHistory(id) {
     const d = _salCalc[String(id)]; if (!d) return;
+    _histId = String(id);
     const sid = sidOf(d.s), cols = _collRows.filter(c => sameId(c.staff_id, sid) && c._month === _salMonth);
     $('historyStaffName').textContent = staffName(d.s); $('historyStaffMeta').textContent = `${staffCode(d.s)} · ${monthLabel(_salMonth)}`;
     $('historyPrevDue').textContent = money(d.prevDue); $('historyIncome').textContent = money(d.inc); $('historyDeduction').textContent = money(d.ded);
@@ -2855,6 +2929,37 @@ function openHistory(id) {
 }
 function closeSalaryHistoryModal() { $('salaryHistoryModal').classList.remove('show'); }
 
+function printSalaryStatement() {
+    const d = _histId && _salCalc[_histId];
+    if (!d) { showGlobalStatus('Open a staff payment history first.', 'error'); return; }
+    const sid = sidOf(d.s), name = staffName(d.s) || '—';
+    const cols = _collRows.filter(c => sameId(c.staff_id, sid) && c._month === _salMonth);
+    const adj = _adjRows.filter(a => sameId(a.staff_id, sid) && a.salary_month === _salMonth);
+    const e = x => escapeHtml(String(x == null ? '' : x));
+    const payRows = cols.map(c => `<tr><td>${e(String(cf(c, ['collected_date','paid_date','payment_date','date','created_at'])).slice(0, 10))}</td><td>${e(String(cf(c, ['collected_time','paid_time','time'])).slice(0, 5))}</td><td style="text-align:right">${money(c._amt)}</td><td>${e(cf(c, ['paid_by','payment_mode','mode','method']))}</td><td>${e(cf(c, ['notes','note','remarks']))}</td></tr>`).join('')
+        || '<tr><td colspan="5" style="text-align:center">No collections this month.</td></tr>';
+    const adjRows = adj.map(a => `<tr><td>${e(a.kind)}</td><td>${e(a.title)}</td><td style="text-align:right">${money(a.amount)}</td><td>${e(a.notes)}</td></tr>`).join('')
+        || '<tr><td colspan="4" style="text-align:center">None.</td></tr>';
+    const th = 'style="background:#f1f5f9;text-align:left;padding:7px 8px;border:1px solid #cbd5e1"';
+    const tbl = 'style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:18px"';
+    const cell = (k, v) => `<div><span>${k}</span><b>${e(v || '—')}</b></div>`;
+    openPrint('Salary Statement', `
+      <style>.st td{padding:6px 8px;border:1px solid #e2e8f0}</style>
+      <div class="detail-grid">${cell('Staff ID', staffCode(d.s))}${cell('Name', name)}${cell('Designation', sf(d.s, 'role'))}${cell('Salary month', monthLabel(_salMonth))}</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">Old balance</div><div class="value" style="font-size:14px">${money(d.prevDue)}</div></div>
+        <div class="stat-card success"><div class="label">Other income</div><div class="value" style="font-size:14px">${money(d.inc)}</div></div>
+        <div class="stat-card danger"><div class="label">Deductions</div><div class="value" style="font-size:14px">${money(d.ded)}</div></div>
+        <div class="stat-card accent"><div class="label">Net payable</div><div class="value" style="font-size:14px">${money(d.payable)}</div></div>
+        <div class="stat-card success"><div class="label">Collected</div><div class="value" style="font-size:14px">${money(d.collected)}</div></div>
+        <div class="stat-card warning"><div class="label">Balance</div><div class="value" style="font-size:14px">${money(d.balance)}</div></div></div>
+      <div class="section-header"><div class="section-header-icon">💰</div><h3>Payments Collected</h3></div>
+      <table class="st" ${tbl}><thead><tr><th ${th}>Date</th><th ${th}>Time</th><th ${th}>Amount</th><th ${th}>Paid by</th><th ${th}>Notes</th></tr></thead><tbody>${payRows}</tbody></table>
+      <div class="section-header"><div class="section-header-icon">🧾</div><h3>Other Income &amp; Deductions</h3></div>
+      <table class="st" ${tbl}><thead><tr><th ${th}>Type</th><th ${th}>Title</th><th ${th}>Amount</th><th ${th}>Notes</th></tr></thead><tbody>${adjRows}</tbody></table>`,
+      'SS-' + staffCode(d.s) + '-' + _salMonth, ['Employee', 'Accountant', 'Authorised Signatory']);
+}
+
 /* ---------------- PRINT + FACE ENROLLMENT (restored) ---------------- */
 const PRINT_EXTRA = `
   .profile-card{display:flex;align-items:center;gap:18px;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:20px;background:linear-gradient(135deg,#f8fafc,#eff6ff)}
@@ -2866,6 +2971,7 @@ const PRINT_EXTRA = `
   .detail-grid span{display:block;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}.detail-grid b{color:#0f172a;font-size:13px}
   .signatures{display:flex;justify-content:space-between;gap:30px;margin-top:70px}
   .doc-foot{margin-top:28px;padding-top:8px;border-top:1px solid #cbd5e1;text-align:center;font-size:9px;color:#94a3b8;letter-spacing:.5px}
+  html,body{overflow-x:hidden}
   @media print{body{padding:0}}`;
 function openPrint(title, body, refNo, sigs) {
     const v = id => escapeHtml($(id).value || ''), co = $('companyName').value || 'Company';
@@ -2885,21 +2991,27 @@ function openPrint(title, body, refNo, sigs) {
 function showPrintView(title, html) {
     closePrintView();
     const ov = document.createElement('div'); ov.id = 'printView';
-    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#e2e8f0;display:flex;flex-direction:column;';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#e2e8f0;display:flex;flex-direction:column;overflow:hidden;';
     ov.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;background:#1e293b;color:#fff;flex-shrink:0">
         <button id="pvBack" style="padding:8px 16px;border:0;border-radius:8px;background:#475569;color:#fff;font-weight:600;cursor:pointer">← Back</button>
         <div style="flex:1;font-weight:600;font-size:14px">${escapeHtml(title)}</div>
         <button id="pvPrint" style="padding:8px 18px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer">🖨️ Print</button>
         <button id="pvClose" style="padding:8px 14px;border:0;border-radius:8px;background:#dc2626;color:#fff;font-weight:600;cursor:pointer">✕ Close</button></div>
-      <iframe id="pvFrame" style="flex:1;border:0;width:100%;background:#fff"></iframe>`;
+      <iframe id="pvFrame" style="flex:1;min-height:0;border:0;width:100%;background:#fff"></iframe>`;
     document.body.appendChild(ov);
+    window._pvPrevOverflow = [document.documentElement.style.overflow, document.body.style.overflow];
+    document.documentElement.style.overflow = 'hidden'; document.body.style.overflow = 'hidden';
     $('pvFrame').srcdoc = html;
     $('pvBack').onclick = $('pvClose').onclick = closePrintView;
     $('pvPrint').onclick = () => { const f = $('pvFrame').contentWindow; f.focus(); f.print(); };
     document.addEventListener('keydown', pvEsc);
 }
 function pvEsc(e) { if (e.key === 'Escape') closePrintView(); }
-function closePrintView() { const o = $('printView'); if (o) o.remove(); document.removeEventListener('keydown', pvEsc); }
+function closePrintView() {
+    const o = $('printView');
+    if (o) { o.remove(); const p = window._pvPrevOverflow || ['', '']; document.documentElement.style.overflow = p[0]; document.body.style.overflow = p[1]; }
+    document.removeEventListener('keydown', pvEsc);
+}
 function printStaffProfile(id) {
     const s = findStaff(id); if (!s) return;
     const joined = String(sf(s, 'joined')).slice(0, 10), exp = calculateExperience(joined), name = staffName(s) || '—';
